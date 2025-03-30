@@ -29,8 +29,16 @@ async function initApp() {
         loadDashboardData();
         loadInventoryTable();
         
-        // Initialize charts with data
-        Charts.initCharts(Database.getChartData());
+        // Initialize charts with data - with error handling
+        try {
+            if (typeof Charts !== 'undefined' && Charts && typeof Charts.initCharts === 'function') {
+                Charts.initCharts(Database.getChartData());
+            } else {
+                console.warn("Charts module not available, skipping chart initialization");
+            }
+        } catch (chartError) {
+            console.warn("Error initializing charts, continuing without visualizations:", chartError);
+        }
         
         // Hide loading indicator
         showLoading(false);
@@ -115,7 +123,15 @@ function setupEventListeners() {
                     // Reload data and update UI
                     loadDashboardData();
                     loadInventoryTable();
-                    Charts.updateCharts(Database.getChartData());
+                    
+                    // Update charts if available
+                    try {
+                        if (typeof Charts !== 'undefined' && Charts && typeof Charts.updateCharts === 'function') {
+                            Charts.updateCharts(Database.getChartData());
+                        }
+                    } catch (chartError) {
+                        console.warn("Error updating charts, but data was imported successfully:", chartError);
+                    }
                     
                     // Reset form
                     importForm.reset();
@@ -200,7 +216,15 @@ function setupEventListeners() {
                 // Reload data and update UI
                 loadDashboardData();
                 loadInventoryTable();
-                Charts.updateCharts(Database.getChartData());
+                
+                // Update charts if available
+                try {
+                    if (typeof Charts !== 'undefined' && Charts && typeof Charts.updateCharts === 'function') {
+                        Charts.updateCharts(Database.getChartData());
+                    }
+                } catch (chartError) {
+                    console.warn("Error updating charts, but entry was added successfully:", chartError);
+                }
                 
                 // Reset form
                 addEntryForm.reset();
@@ -422,27 +446,37 @@ function loadInventoryTable() {
     
     // Initialize DataTable if not already initialized
     if (!window.inventoryTable) {
-        window.inventoryTable = new DataTable(tableElement, {
-            responsive: true,
-            pageLength: 25,
-            language: {
-                search: "Search inventory:",
-                lengthMenu: "Show _MENU_ entries per page",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                paginate: {
-                    first: "First",
-                    last: "Last",
-                    next: "Next",
-                    previous: "Previous"
-                }
-            },
-            columnDefs: [
-                { targets: -1, orderable: false, searchable: false }
-            ]
-        });
+        try {
+            window.inventoryTable = new DataTable(tableElement, {
+                responsive: true,
+                pageLength: 25,
+                language: {
+                    search: "Search inventory:",
+                    lengthMenu: "Show _MENU_ entries per page",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                },
+                columnDefs: [
+                    { targets: -1, orderable: false, searchable: false }
+                ]
+            });
+        } catch (error) {
+            console.error('Error initializing DataTable:', error);
+            // Fallback to basic HTML table if DataTable fails to initialize
+        }
     } else {
         // Refresh the DataTable
-        window.inventoryTable.clear().rows.add(tableBody.rows).draw();
+        try {
+            window.inventoryTable.clear().rows.add(tableBody.rows).draw();
+        } catch (error) {
+            console.error('Error refreshing DataTable:', error);
+            // Just leave the HTML table as is if DataTable refresh fails
+        }
     }
 }
 
@@ -549,8 +583,14 @@ function displayItemDetails(item) {
     modalBody.innerHTML = content;
     
     // Show the modal
-    const modalInstance = new bootstrap.Modal(modal);
-    modalInstance.show();
+    try {
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+    } catch (error) {
+        console.error('Error showing modal:', error);
+        // Fallback to basic alert if modal fails
+        alert(`Item details for ${item['Catalog #']}: ${item['Genus']} ${item['Species']} (${item['Common Name']})`);
+    }
 }
 
 /**
@@ -669,7 +709,15 @@ function displayEditForm(item) {
                 // Reload data and update UI
                 loadDashboardData();
                 loadInventoryTable();
-                Charts.updateCharts(Database.getChartData());
+                
+                // Update charts if available
+                try {
+                    if (typeof Charts !== 'undefined' && Charts && typeof Charts.updateCharts === 'function') {
+                        Charts.updateCharts(Database.getChartData());
+                    }
+                } catch (chartError) {
+                    console.warn("Error updating charts, but item was updated successfully:", chartError);
+                }
                 
                 // Clear edit form
                 editResults.innerHTML = `<div class="alert alert-success">Item with Catalog # ${updatedData['Catalog #']} was updated successfully.</div>`;
@@ -691,7 +739,15 @@ function displayEditForm(item) {
                         // Reload data and update UI
                         loadDashboardData();
                         loadInventoryTable();
-                        Charts.updateCharts(Database.getChartData());
+                        
+                        // Update charts if available
+                        try {
+                            if (typeof Charts !== 'undefined' && Charts && typeof Charts.updateCharts === 'function') {
+                                Charts.updateCharts(Database.getChartData());
+                            }
+                        } catch (chartError) {
+                            console.warn("Error updating charts, but item was deleted successfully:", chartError);
+                        }
                         
                         // Clear edit form
                         editResults.innerHTML = `<div class="alert alert-success">Item with Catalog # ${originalCatalog} was deleted successfully.</div>`;

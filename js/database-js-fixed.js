@@ -27,6 +27,34 @@ const Database = (function() {
                     console.log('Data loaded from localStorage:', inventoryData.length, 'records');
                     resolve(inventoryData);
                 } catch (error) {
+            console.error('Error generating chart data:', error);
+            // Return empty data structures if there's an error
+            return {
+                orderData: {},
+                familyData: {},
+                countryData: {},
+                timelineData: {}
+            };
+        }
+    }
+    
+    // Public API
+    return {
+        init,
+        importFromFile,
+        exportToExcel,
+        exportToCSV,
+        getAllData,
+        getItemByCatalog,
+        addItem,
+        updateItem,
+        deleteItem,
+        searchItems,
+        getUniqueValues,
+        getSummaryStats,
+        getChartData
+    };
+})();
                     console.error('Error parsing stored data:', error);
                     loadDemoData()
                         .then(resolve)
@@ -121,9 +149,15 @@ const Database = (function() {
                         }
                     } else {
                         // Parse Excel using SheetJS
-                        const workbook = XLSX.read(data, { type: 'binary' });
-                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        importedData = XLSX.utils.sheet_to_json(firstSheet);
+                        try {
+                            const workbook = XLSX.read(data, { type: 'binary' });
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            importedData = XLSX.utils.sheet_to_json(firstSheet);
+                        } catch (excelError) {
+                            console.error('Error parsing Excel file:', excelError);
+                            reject(new Error('Could not parse Excel file. Please check the file format.'));
+                            return;
+                        }
                     }
                     
                     if (append) {
@@ -213,12 +247,17 @@ const Database = (function() {
      * @returns {Blob} Excel file blob
      */
     function exportToExcel() {
-        const worksheet = XLSX.utils.json_to_sheet(inventoryData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventory');
-        
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(inventoryData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventory');
+            
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            throw new Error('Failed to export to Excel. Please try again.');
+        }
     }
     
     /**
@@ -226,9 +265,14 @@ const Database = (function() {
      * @returns {Blob} CSV file blob
      */
     function exportToCSV() {
-        const worksheet = XLSX.utils.json_to_sheet(inventoryData);
-        const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
-        return new Blob([csvOutput], { type: 'text/csv' });
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(inventoryData);
+            const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+            return new Blob([csvOutput], { type: 'text/csv' });
+        } catch (error) {
+            console.error('Error exporting to CSV:', error);
+            throw new Error('Failed to export to CSV. Please try again.');
+        }
     }
     
     /**
@@ -358,72 +402,57 @@ const Database = (function() {
      * @returns {Object} Chart data
      */
     function getChartData() {
-        // For Orders chart
-        const orderCounts = {};
-        inventoryData.forEach(item => {
-            const order = item.Order || 'Unknown';
-            orderCounts[order] = (orderCounts[order] || 0) + 1;
-        });
-        
-        // For Families chart
-        const familyCounts = {};
-        inventoryData.forEach(item => {
-            const family = item.Family || 'Unknown';
-            familyCounts[family] = (familyCounts[family] || 0) + 1;
-        });
-        
-        // Sort by count and get top 10 families
-        const topFamilies = Object.entries(familyCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .reduce((obj, [key, value]) => {
-                obj[key] = value;
-                return obj;
-            }, {});
-        
-        // For Geographic chart
-        const countryCounts = {};
-        inventoryData.forEach(item => {
-            const country = item.Country || 'Unknown';
-            countryCounts[country] = (countryCounts[country] || 0) + 1;
-        });
-        
-        // For Timeline chart (if date information is available)
-        const timelineCounts = {};
-        inventoryData.forEach(item => {
-            if (item['Date collected']) {
-                try {
-                    const date = new Date(item['Date collected']);
-                    const year = date.getFullYear();
-                    timelineCounts[year] = (timelineCounts[year] || 0) + 1;
-                } catch (e) {
-                    // Skip items with invalid dates
+        try {
+            // For Orders chart
+            const orderCounts = {};
+            inventoryData.forEach(item => {
+                const order = item.Order || 'Unknown';
+                orderCounts[order] = (orderCounts[order] || 0) + 1;
+            });
+            
+            // For Families chart
+            const familyCounts = {};
+            inventoryData.forEach(item => {
+                const family = item.Family || 'Unknown';
+                familyCounts[family] = (familyCounts[family] || 0) + 1;
+            });
+            
+            // Sort by count and get top 10 families
+            const topFamilies = Object.entries(familyCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .reduce((obj, [key, value]) => {
+                    obj[key] = value;
+                    return obj;
+                }, {});
+            
+            // For Geographic chart
+            const countryCounts = {};
+            inventoryData.forEach(item => {
+                const country = item.Country || 'Unknown';
+                countryCounts[country] = (countryCounts[country] || 0) + 1;
+            });
+            
+            // For Timeline chart (if date information is available)
+            const timelineCounts = {};
+            inventoryData.forEach(item => {
+                if (item['Date collected']) {
+                    try {
+                        const date = new Date(item['Date collected']);
+                        if (!isNaN(date.getTime())) {
+                            const year = date.getFullYear();
+                            timelineCounts[year] = (timelineCounts[year] || 0) + 1;
+                        }
+                    } catch (e) {
+                        // Skip items with invalid dates
+                    }
                 }
-            }
-        });
-        
-        return {
-            orderData: orderCounts,
-            familyData: topFamilies,
-            countryData: countryCounts,
-            timelineData: timelineCounts
-        };
-    }
-    
-    // Public API
-    return {
-        init,
-        importFromFile,
-        exportToExcel,
-        exportToCSV,
-        getAllData,
-        getItemByCatalog,
-        addItem,
-        updateItem,
-        deleteItem,
-        searchItems,
-        getUniqueValues,
-        getSummaryStats,
-        getChartData
-    };
-})();
+            });
+            
+            return {
+                orderData: orderCounts,
+                familyData: topFamilies,
+                countryData: countryCounts,
+                timelineData: timelineCounts
+            };
+        } catch (error) {
