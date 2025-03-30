@@ -442,3 +442,4 @@ const Charts = (function() {
         initCharts,
         updateCharts
     };
+    })();
