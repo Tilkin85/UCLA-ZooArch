@@ -25,54 +25,7 @@
     "Species": "dussumieri",
     "Common Name": "Whitecheek Shark",
     "Location": "Indian Ocean",
-    "Country": "India",
-    "How collected": "Donation",
-    "Date collected": "2021-03-10"
-  },
-  {
-    "Owner": "TAW",
-    "Catalog #": 2133,
-    "# of specimens": 1,
-    "Class": 1,
-    "Order": "Carcharhiniformes",
-    "Family": "Carcharhinidae",
-    "Genus": "Carcharhinus",
-    "Species": "dussumieri",
-    "Common Name": "Whitecheek Shark",
-    "Location": "Bay of Bengal",
-    "Country": "India",
-    "How collected": "eBay",
-    "Date collected": "2023-01-05"
-  },
-  {
-    "Owner": "TAW",
-    "Catalog #": 1553,
-    "# of specimens": 1,
-    "Class": 1,
-    "Order": "Carcharhiniformes",
-    "Family": "Carcharhinidae",
-    "Genus": "Carcharhinus",
-    "Species": "falciformis",
-    "Common Name": "Silky Shark",
-    "Location": "Pacific Ocean",
-    "Country": "Mexico",
-    "How collected": "Fowler collections transfer",
-    "Date collected": "2020-11-20"
-  },
-  {
-    "Owner": "TAW",
-    "Catalog #": 1555,
-    "# of specimens": 1,
-    "Class": 1,
-    "Order": "Carcharhiniformes",
-    "Family": "Carcharhinidae",
-    "Genus": "Carcharhinus",
-    "Species": "falciformis",
-    "Common Name": "Silky Shark",
-    "Location": "Caribbean Sea",
-    "Country": "Cuba",
-    "How collected": "Field collection",
-    "Date collected": "2022-08-30"
+    "Country": "India"
   },
   {
     "Owner": "UCLA Bio",
@@ -86,10 +39,7 @@
     "Common Name": "Silvertip Shark",
     "Location": "Clipperton",
     "Country": "Mexico",
-    "How collected": "Field collection",
-    "Date collected": "1958-08-17",
-    "Collector": "W. J. Baldwin",
-    "Contents": "set of jaws"
+    "Collector": "W. J. Baldwin"
   },
   {
     "Owner": "E",
@@ -101,10 +51,7 @@
     "Genus": "Antilocapra",
     "Species": "americana",
     "Common Name": "Pronghorn",
-    "Location": "Western Plains",
-    "Country": "USA",
-    "How collected": "Museum exchange",
-    "Date collected": "2019-05-12"
+    "Country": "USA"
   },
   {
     "Owner": "E",
@@ -116,71 +63,6 @@
     "Genus": "Bos",
     "Species": "taurus",
     "Common Name": "Domestic Cow",
-    "Location": "Local farm",
-    "Country": "USA",
-    "How collected": "Purchase",
-    "Date collected": "2021-09-18"
-  },
-  {
-    "Owner": "TAW",
-    "Catalog #": 3242,
-    "# of specimens": 2,
-    "Class": 1,
-    "Order": "Lamniformes",
-    "Family": "Lamnidae",
-    "Genus": "Isurus",
-    "Species": "oxyrinchus",
-    "Common Name": "Shortfin Mako Shark",
-    "Location": "Atlantic Ocean",
-    "Country": "USA",
-    "How collected": "Research expedition",
-    "Date collected": "2023-07-22"
-  },
-  {
-    "Owner": "TAW",
-    "Catalog #": 2875,
-    "# of specimens": 1,
-    "Class": 1,
-    "Order": "Lamniformes",
-    "Family": "Lamnidae",
-    "Genus": "Carcharodon",
-    "Species": "carcharias",
-    "Common Name": "Great White Shark",
-    "Location": "Southern California",
-    "Country": "USA",
-    "How collected": "Beached specimen",
-    "Date collected": "2022-12-05",
-    "Contents": "teeth only"
-  },
-  {
-    "Owner": "UCLA Bio",
-    "Catalog #": 189,
-    "# of specimens": 3,
-    "Class": 1,
-    "Order": "Tetraodontiformes",
-    "Family": "Tetraodontidae",
-    "Genus": "Arothron",
-    "Species": "hispidus",
-    "Common Name": "White-spotted Puffer",
-    "Location": "Hawaiian Islands",
-    "Country": "USA",
-    "How collected": "Field collection",
-    "Date collected": "1962-06-10",
-    "Collector": "R. Snodgrass"
-  },
-  {
-    "Owner": "E",
-    "Catalog #": 422,
-    "# of specimens": 1,
-    "Class": 1,
-    "Order": "Carnivora",
-    "Family": "Canidae",
-    "Genus": "Canis",
-    "Species": "lupus",
-    "Common Name": "Gray Wolf",
-    "Location": "Yellowstone",
-    "Country": "USA",
-    "How collected": "Natural death recovery",
-    "Date collected": "2020-02-28",
-    "Contents": "complete skeleton"
+    "Country": "USA"
   }
+]
