@@ -4,6 +4,9 @@
 
 // Charts namespace - minimalist and fault-tolerant
 const Charts = (function() {
+    // Store chart instances for later reference
+    const chartInstances = {};
+    
     /**
      * Initialize all charts
      * @param {Object} chartData Data for charts from Database.getChartData()
@@ -33,6 +36,12 @@ const Charts = (function() {
             const ctx = document.getElementById('orderChart');
             if (!ctx) return;
             
+            // Destroy existing chart if it exists
+            if (chartInstances.orderChart) {
+                chartInstances.orderChart.destroy();
+                chartInstances.orderChart = null;
+            }
+            
             // Get top orders
             const topOrders = Object.entries(orderData)
                 .sort((a, b) => b[1] - a[1])
@@ -42,7 +51,7 @@ const Charts = (function() {
             const data = topOrders.map(([, count]) => count);
             
             // Create a simple chart
-            new Chart(ctx, {
+            chartInstances.orderChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
@@ -83,11 +92,17 @@ const Charts = (function() {
             const ctx = document.getElementById('familyChart');
             if (!ctx) return;
             
+            // Destroy existing chart if it exists
+            if (chartInstances.familyChart) {
+                chartInstances.familyChart.destroy();
+                chartInstances.familyChart = null;
+            }
+            
             const labels = Object.keys(familyData);
             const data = Object.values(familyData);
             
             // Create a simple chart
-            new Chart(ctx, {
+            chartInstances.familyChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -124,6 +139,12 @@ const Charts = (function() {
             const ctx = document.getElementById('geographicChart');
             if (!ctx) return;
             
+            // Destroy existing chart if it exists
+            if (chartInstances.geographicChart) {
+                chartInstances.geographicChart.destroy();
+                chartInstances.geographicChart = null;
+            }
+            
             // Get top countries
             const topCountries = Object.entries(countryData)
                 .filter(([country]) => country !== 'Unknown')
@@ -140,7 +161,7 @@ const Charts = (function() {
             }
             
             // Create a simple chart
-            new Chart(ctx, {
+            chartInstances.geographicChart = new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: labels,
