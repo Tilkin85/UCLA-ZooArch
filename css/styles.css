@@ -1,4 +1,4 @@
-/* Main Styles for ZOARCH Lab Inventory */
+/* Main Styles for ZOARCH Lab Inventory - Simplified */
 
 /* General Styles */
 body {
@@ -23,13 +23,9 @@ body {
 /* Card Styles */
 .card {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
     border-radius: 8px;
     border: none;
-}
-
-.card:hover {
-    transform: translateY(-5px);
+    margin-bottom: 20px;
 }
 
 .card-title {
@@ -49,7 +45,6 @@ body {
 
 .table-responsive {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 /* Dashboard Styles */
@@ -77,69 +72,7 @@ body {
     border-top: 1px solid #e9ecef;
 }
 
-/* Charts and Visualizations */
-canvas {
-    max-width: 100%;
-    height: auto !important;
-}
-
-/* DataTables Custom Styling */
-.dataTables_wrapper .dataTables_length, 
-.dataTables_wrapper .dataTables_filter, 
-.dataTables_wrapper .dataTables_info, 
-.dataTables_wrapper .dataTables_processing, 
-.dataTables_wrapper .dataTables_paginate {
-    margin-bottom: 15px;
-    color: #495057;
-}
-
-.dataTables_wrapper .dataTables_paginate .paginate_button.current {
-    background: #0d6efd;
-    color: white !important;
-    border: 1px solid #0d6efd;
-}
-
-.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    background: #0b5ed7;
-    color: white !important;
-    border: 1px solid #0b5ed7;
-}
-
-/* Loading Indicator */
-.loading-spinner {
-    display: inline-block;
-    width: 2rem;
-    height: 2rem;
-    vertical-align: text-bottom;
-    border: 0.25rem solid currentColor;
-    border-right-color: transparent;
-    border-radius: 50%;
-    animation: spinner-border .75s linear infinite;
-}
-
-/* Tooltip Styles */
-.tooltip-inner {
-    max-width: 300px;
-    padding: 8px 12px;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 767.98px) {
-    .card {
-        margin-bottom: 1rem;
-    }
-    
-    .display-4 {
-        font-size: 2.5rem;
-    }
-}
-
-/* Animation for new entries */
-@keyframes highlight {
-    0% { background-color: rgba(255, 255, 0, 0.5); }
-    100% { background-color: transparent; }
-}
-
-.highlight-row {
-    animation: highlight 2s ease-in-out;
+/* Hide elements with d-none class */
+.d-none {
+    display: none !important;
 }
