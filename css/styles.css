@@ -1,78 +1,106 @@
-/* Main Styles for ZOARCH Lab Inventory - Simplified */
+/* Additional styles for ZOARCH Lab Inventory - GitHub and Incomplete Records */
 
-/* General Styles */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
-    color: #333;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
+/* General Enhancements */
 .container-fluid {
-    max-width: 1600px;
+    max-width: 1800px;
 }
 
-/* Navbar Styles */
-.navbar-brand {
-    font-weight: 600;
-    letter-spacing: 0.5px;
+/* GitHub Status Indicator */
+#github-status {
+    z-index: 1000;
+    transition: opacity 0.3s;
 }
 
-/* Card Styles */
-.card {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    border: none;
-    margin-bottom: 20px;
+#github-status:hover {
+    opacity: 0.8;
 }
 
-.card-title {
-    font-weight: 600;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
+#sync-status {
+    display: inline-flex;
+    align-items: center;
 }
 
-/* Table Styles */
-.table {
+/* Incomplete Records Styles */
+.incomplete-cell {
+    position: relative;
+    cursor: pointer;
+}
+
+.incomplete-cell::before {
+    content: "Empty";
+    color: #dc3545;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.editable {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.editable:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Flash animation for rows */
+@keyframes highlightRow {
+    0% { background-color: rgba(0, 123, 255, 0.3); }
+    100% { background-color: transparent; }
+}
+
+.flash-highlight {
+    animation: highlightRow 2s ease;
+}
+
+/* Form controls in table cells */
+#incomplete-table-body input {
     width: 100%;
-    margin-bottom: 1rem;
-    color: #212529;
-    vertical-align: middle;
+    padding: 0.25rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
 }
 
-.table-responsive {
-    overflow-x: auto;
+/* Export buttons spacing */
+.export-buttons {
+    display: flex;
+    gap: 0.5rem;
 }
 
-/* Dashboard Styles */
-.display-4 {
-    font-weight: 700;
-    color: #0d6efd;
+/* Dashboard Card Enhancements */
+#dashboard .card {
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-/* Forms and Input Styles */
-.form-control:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+#dashboard .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.btn {
-    border-radius: 4px;
-    font-weight: 500;
+/* Sync indicator animations */
+@keyframes syncRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* Footer Styles */
-.footer {
-    margin-top: auto;
-    background-color: #f8f9fa;
-    padding: 1rem 0;
-    border-top: 1px solid #e9ecef;
+.sync-spinner {
+    display: inline-block;
+    animation: syncRotate 1.5s linear infinite;
 }
 
-/* Hide elements with d-none class */
-.d-none {
-    display: none !important;
+/* GitHub config modal */
+#github-config-modal .form-text {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        max-height: 70vh;
+    }
+    
+    #incomplete-table th, 
+    #incomplete-table td {
+        min-width: 120px;
+    }
 }
