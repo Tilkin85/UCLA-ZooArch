@@ -1,5 +1,5 @@
 /**
- * ZOARCH Lab Inventory - Database Management (Simplified)
+ * ZOARCH Lab Inventory - Database Management with GitHub Integration
  */
 
 // Database namespace
@@ -10,14 +10,46 @@ const Database = (function() {
     
     // Private variables
     let inventoryData = [];
+    let storageMode = 'local'; // 'local' or 'github'
     
     /**
      * Initialize the database
      */
-    function init() {
-        return new Promise((resolve, reject) => {
+    function init(config = {}) {
+        return new Promise(async (resolve, reject) => {
             try {
-                // Try to load data from localStorage
+                // Set the storage mode
+                if (config.useGitHub === true) {
+                    storageMode = 'github';
+                }
+                
+                // Try to initialize GitHub storage if requested
+                if (storageMode === 'github' && typeof GitHubStorage !== 'undefined') {
+                    const gitHubInitialized = await GitHubStorage.init(config.github || {});
+                    
+                    // If GitHub is initialized and has a token, load data from there
+                    if (gitHubInitialized && GitHubStorage.hasToken()) {
+                        try {
+                            const gitHubData = await GitHubStorage.getInventoryData();
+                            inventoryData = gitHubData;
+                            console.log('Data loaded from GitHub:', inventoryData.length, 'records');
+                            
+                            // Update local storage as a backup
+                            saveToLocalStorage();
+                            
+                            resolve(inventoryData);
+                            return;
+                        } catch (gitHubError) {
+                            console.warn('Failed to load from GitHub, falling back to local storage:', gitHubError);
+                            storageMode = 'local';
+                        }
+                    } else {
+                        console.log('GitHub storage not initialized or missing token, using local storage');
+                        storageMode = 'local';
+                    }
+                }
+                
+                // If we're here, use local storage
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 
                 if (savedData) {
@@ -57,7 +89,7 @@ const Database = (function() {
                     })
                     .then(data => {
                         inventoryData = data;
-                        saveToLocalStorage();
+                        saveData();
                         console.log('Demo data loaded:', inventoryData.length, 'records');
                         resolve(inventoryData);
                     })
@@ -65,7 +97,7 @@ const Database = (function() {
                         console.warn('Could not load demo data:', error);
                         // Create empty inventory
                         inventoryData = [];
-                        saveToLocalStorage();
+                        saveData();
                         resolve(inventoryData);
                     });
             } catch (error) {
@@ -73,6 +105,45 @@ const Database = (function() {
                 resolve([]);
             }
         });
+    }
+    
+    /**
+     * Save current data to the selected storage
+     */
+    function saveData() {
+        // Save to local storage first as a backup
+        saveToLocalStorage();
+        
+        // If using GitHub, save there too
+        if (storageMode === 'github' && typeof GitHubStorage !== 'undefined' && GitHubStorage.hasToken()) {
+            GitHubStorage.saveInventoryData(inventoryData)
+                .then(() => {
+                    console.log('Data saved to GitHub successfully');
+                    
+                    // Show sync indicator
+                    const syncIndicator = document.getElementById('sync-indicator');
+                    if (syncIndicator) {
+                        syncIndicator.innerHTML = `<span class="badge bg-success">Synced to GitHub</span>`;
+                        setTimeout(() => {
+                            syncIndicator.innerHTML = '';
+                        }, 3000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving to GitHub:', error);
+                    
+                    // Show error indicator
+                    const syncIndicator = document.getElementById('sync-indicator');
+                    if (syncIndicator) {
+                        syncIndicator.innerHTML = `<span class="badge bg-danger">GitHub Sync Failed</span>`;
+                        setTimeout(() => {
+                            syncIndicator.innerHTML = '';
+                        }, 3000);
+                    }
+                });
+        }
+        
+        return true;
     }
     
     /**
@@ -87,6 +158,27 @@ const Database = (function() {
             console.error('Error saving to localStorage:', error);
             return false;
         }
+    }
+    
+    /**
+     * Set the storage mode
+     * @param {string} mode - 'local' or 'github'
+     */
+    function setStorageMode(mode) {
+        if (mode !== 'local' && mode !== 'github') {
+            throw new Error('Invalid storage mode. Must be "local" or "github"');
+        }
+        
+        storageMode = mode;
+        return true;
+    }
+    
+    /**
+     * Get the current storage mode
+     * @returns {string} The current storage mode
+     */
+    function getStorageMode() {
+        return storageMode;
     }
     
     /**
@@ -123,7 +215,7 @@ const Database = (function() {
                             // Parse Excel using SheetJS
                             const workbook = XLSX.read(data, { type: 'binary' });
                             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                            importedData = XLSX.utils.sheet_to_json(firstSheet);
+                            importedData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
                         }
                         
                         if (append) {
@@ -132,7 +224,7 @@ const Database = (function() {
                             inventoryData = importedData;
                         }
                         
-                        saveToLocalStorage();
+                        saveData();
                         resolve(inventoryData);
                     } catch (error) {
                         console.error('Error importing data:', error);
@@ -191,7 +283,7 @@ const Database = (function() {
             }
             
             inventoryData.push(item);
-            return saveToLocalStorage();
+            return saveData();
         } catch (error) {
             console.error('Error adding item:', error);
             return false;
@@ -213,7 +305,7 @@ const Database = (function() {
             }
             
             inventoryData[index] = { ...inventoryData[index], ...updatedData };
-            return saveToLocalStorage();
+            return saveData();
         } catch (error) {
             console.error('Error updating item:', error);
             return false;
@@ -236,7 +328,7 @@ const Database = (function() {
                 return false;
             }
             
-            return saveToLocalStorage();
+            return saveData();
         } catch (error) {
             console.error('Error deleting item:', error);
             return false;
@@ -260,6 +352,31 @@ const Database = (function() {
     }
     
     /**
+     * Check if a record has any missing/incomplete fields
+     * @param {Object} item - The inventory item to check
+     * @returns {boolean} True if item has missing fields
+     */
+    function hasIncompleteFields(item) {
+        // Define required fields
+        const requiredFields = [
+            'Order', 'Family', 'Genus', 'Species', 'Common Name', 
+            'Location', 'Country', 'How collected', 'Date collected'
+        ];
+        
+        return requiredFields.some(field => 
+            !item[field] || item[field].toString().trim() === ''
+        );
+    }
+    
+    /**
+     * Get all incomplete records
+     * @returns {Array} Array of records with incomplete fields
+     */
+    function getIncompleteRecords() {
+        return inventoryData.filter(item => hasIncompleteFields(item));
+    }
+    
+    /**
      * Get summary statistics about the inventory
      */
     function getSummaryStats() {
@@ -270,7 +387,8 @@ const Database = (function() {
                 uniqueSpecies: getUniqueValues('Species').length,
                 uniqueGenera: getUniqueValues('Genus').length,
                 uniqueFamilies: getUniqueValues('Family').length,
-                uniqueOrders: getUniqueValues('Order').length
+                uniqueOrders: getUniqueValues('Order').length,
+                incompleteItems: getIncompleteRecords().length
             };
         } catch (error) {
             console.error('Error getting summary stats:', error);
@@ -280,7 +398,8 @@ const Database = (function() {
                 uniqueSpecies: 0,
                 uniqueGenera: 0,
                 uniqueFamilies: 0,
-                uniqueOrders: 0
+                uniqueOrders: 0,
+                incompleteItems: 0
             };
         }
     }
@@ -323,16 +442,14 @@ const Database = (function() {
             return {
                 orderData: orderCounts,
                 familyData: topFamilies,
-                countryData: countryCounts,
-                timelineData: {}
+                countryData: countryCounts
             };
         } catch (error) {
             console.error('Error generating chart data:', error);
             return {
                 orderData: {},
                 familyData: {},
-                countryData: {},
-                timelineData: {}
+                countryData: {}
             };
         }
     }
@@ -348,6 +465,9 @@ const Database = (function() {
         deleteItem,
         getUniqueValues,
         getSummaryStats,
-        getChartData
+        getChartData,
+        getIncompleteRecords,
+        setStorageMode,
+        getStorageMode
     };
 })();
