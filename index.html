@@ -280,46 +280,86 @@
             </div>
         </section>
         
-        <!-- About Section -->
-        <section id="about" class="content-section d-none">
-            <div class="row">
-                <div class="col-12">
-                    <h2>About ZOARCH Lab Inventory</h2>
-                    <p>This application was created to manage and visualize the Zoological-Archaeological Lab Inventory database. It provides a user-friendly interface to browse, search, update, and analyze the specimen collection.</p>
+<!-- About Section -->
+<section id="about" class="content-section d-none">
+    <div class="row">
+        <div class="col-12">
+            <h2>About ZOARCH Lab Inventory</h2>
+            <p>This application was created to manage and visualize the Zoological-Archaeological Lab Inventory database. It provides a user-friendly interface to browse, search, update, and analyze the specimen collection.</p>
+        </div>
+    </div>
+    
+    <div class="row mt-3">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Features</h5>
+                    <ul>
+                        <li>Interactive dashboard with key metrics</li>
+                        <li>Comprehensive inventory browser</li>
+                        <li>Data import/export functionality</li>
+                        <li>Add and edit inventory entries</li>
+                        <li>Incomplete records management</li>
+                        <li><strong>NEW:</strong> GitHub integration for persistent storage</li>
+                    </ul>
                 </div>
             </div>
-            
-            <div class="row mt-3">
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Features</h5>
-                            <ul>
-                                <li>Interactive dashboard with key metrics</li>
-                                <li>Comprehensive inventory browser</li>
-                                <li>Data import functionality</li>
-                                <li>Add inventory entries</li>
-                                <li>Browser-based storage for offline capability</li>
-                            </ul>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">How to Use</h5>
+                    <p>This application now supports both local storage and GitHub storage:</p>
+                    <ol>
+                        <li>Import your data using the Update Data section</li>
+                        <li>Browse your complete inventory in the Inventory section</li>
+                        <li>Use the Incomplete Records tab to fill in missing information</li>
+                        <li>To enable GitHub sync (for persistent storage), click "Configure GitHub Storage" in the Incomplete Records tab</li>
+                        <li>Export your data anytime via the Update Data section</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-3">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Storage Options</h5>
+                    <p>This application offers two storage modes:</p>
+                    
+                    <div class="mb-3">
+                        <h6><i class="fas fa-database"></i> Local Storage (Default)</h6>
+                        <p>Data is stored in your browser's localStorage. This means:</p>
+                        <ul>
+                            <li>Data persists between browser sessions on this device</li>
+                            <li>Data is not shared between devices</li>
+                            <li>Clearing browser data will erase your inventory</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h6><i class="fab fa-github"></i> GitHub Storage</h6>
+                        <p>Data is stored in a JSON file in your GitHub repository. This means:</p>
+                        <ul>
+                            <li>Data persists even if browser data is cleared</li>
+                            <li>Data can be accessed from multiple devices</li>
+                            <li>Changes are tracked through Git commit history</li>
+                            <li>Requires a GitHub account and repository</li>
+                        </ul>
+                        <div class="mt-3">
+                            <button id="about-github-setup" class="btn btn-primary">
+                                <i class="fab fa-github"></i> Set Up GitHub Storage
+                            </button>
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">How to Use</h5>
-                            <p>This application uses your browser's local storage to maintain data between sessions. To get started:</p>
-                            <ol>
-                                <li>Import your Excel data using the Update Data section</li>
-                                <li>Browse your inventory in the Inventory section</li>
-                                <li>Add new entries as needed</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
             </div>
-        </section>
+        </div>
+    </div>
+</section>
     </div>
 
     <!-- Footer -->
