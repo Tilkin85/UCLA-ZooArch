@@ -12,14 +12,7 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">ZOARCH Lab Inventory</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">
         <a class="navbar-brand" href="#">ZOARCH Lab Inventory</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -279,7 +272,135 @@
                 </div>
             </div>
         </section>
-        
+<!-- Incomplete Records Section -->
+<section id="incomplete" class="content-section d-none">
+    <div class="row">
+        <div class="col-12">
+            <h2>Incomplete Records</h2>
+            <p>Identify and complete records with missing information. Completing these records helps maintain data quality and consistency.</p>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Records Needing Attention</h5>
+                            <div id="incomplete-summary">Loading summary...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">Data Storage</h5>
+                                <p class="card-text mb-0" id="storage-status">Current: Local Storage</p>
+                            </div>
+                            <button id="configure-github-btn" class="btn btn-primary">
+                                <i class="fab fa-github"></i> Configure GitHub Storage
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Editable Incomplete Records Table -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Editable Records</h5>
+                        <div>
+                            <span id="incomplete-sync-indicator"></span>
+                            <button id="save-incomplete-btn" class="btn btn-success ms-2">
+                                <i class="fas fa-save"></i> Save All Changes
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table id="incomplete-table" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Catalog #</th>
+                                    <th>Owner</th>
+                                    <th>Order</th>
+                                    <th>Family</th>
+                                    <th>Genus</th>
+                                    <th>Species</th>
+                                    <th>Common Name</th>
+                                    <th>Location</th>
+                                    <th>Country</th>
+                                    <th>How collected</th>
+                                    <th>Date collected</th>
+                                </tr>
+                            </thead>
+                            <tbody id="incomplete-table-body">
+                                <!-- Will be populated dynamically -->
+                                <tr>
+                                    <td colspan="11" class="text-center">Loading incomplete records...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- GitHub Configuration Modal -->
+<div class="modal fade" id="github-config-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">GitHub Storage Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Configure GitHub storage to access your data from any device. This requires a GitHub repository and a personal access token with appropriate permissions.</p>
+                
+                <form id="github-config-form">
+                    <div class="mb-3">
+                        <label for="github-owner" class="form-label">GitHub Username or Organization</label>
+                        <input type="text" class="form-control" id="github-owner" placeholder="e.g., your-username">
+                        <div class="form-text">Enter your GitHub username or organization that owns the repository.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-repo" class="form-label">Repository Name</label>
+                        <input type="text" class="form-control" id="github-repo" placeholder="e.g., zoarch-inventory">
+                        <div class="form-text">The repository where your data will be stored.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-branch" class="form-label">Branch</label>
+                        <input type="text" class="form-control" id="github-branch" value="main" placeholder="e.g., main">
+                        <div class="form-text">Branch to store the data, usually 'main'.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-path" class="form-label">File Path</label>
+                        <input type="text" class="form-control" id="github-path" value="data/inventory.json" placeholder="e.g., data/inventory.json">
+                        <div class="form-text">Path to the data file in the repository.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-token" class="form-label">Personal Access Token (PAT)</label>
+                        <input type="password" class="form-control" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxx">
+                        <div class="form-text">
+                            Create a token with 'repo' scope at 
+                            <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>.
+                            This token is stored securely in your browser's session storage.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-github-config">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>        
 <!-- About Section -->
 <section id="about" class="content-section d-none">
     <div class="row">
@@ -361,7 +482,60 @@
     </div>
 </section>
     </div>
-
+<!-- GitHub Configuration Modal -->
+<div class="modal fade" id="github-config-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">GitHub Storage Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Configure GitHub storage to access your data from any device. This requires a GitHub repository and a personal access token with appropriate permissions.</p>
+                
+                <form id="github-config-form">
+                    <div class="mb-3">
+                        <label for="github-owner" class="form-label">GitHub Username or Organization</label>
+                        <input type="text" class="form-control" id="github-owner" placeholder="e.g., your-username">
+                        <div class="form-text">Enter your GitHub username or organization that owns the repository.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-repo" class="form-label">Repository Name</label>
+                        <input type="text" class="form-control" id="github-repo" placeholder="e.g., zoarch-inventory">
+                        <div class="form-text">The repository where your data will be stored.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-branch" class="form-label">Branch</label>
+                        <input type="text" class="form-control" id="github-branch" value="main" placeholder="e.g., main">
+                        <div class="form-text">Branch to store the data, usually 'main'.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-path" class="form-label">File Path</label>
+                        <input type="text" class="form-control" id="github-path" value="data/inventory.json" placeholder="e.g., data/inventory.json">
+                        <div class="form-text">Path to the data file in the repository.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="github-token" class="form-label">Personal Access Token (PAT)</label>
+                        <input type="password" class="form-control" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxx">
+                        <div class="form-text">
+                            Create a token with 'repo' scope at 
+                            <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>.
+                            This token is stored securely in your browser's session storage.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-github-config">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
     <!-- Footer -->
     <footer class="footer mt-5 py-3 bg-light">
         <div class="container text-center">
