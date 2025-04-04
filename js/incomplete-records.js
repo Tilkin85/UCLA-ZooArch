@@ -9,7 +9,10 @@ const IncompleteRecords = (function() {
         table: null,
         tableBody: null,
         saveButton: null,
-        syncIndicator: null
+        syncIndicator: null,
+        summaryElement: null,
+        storageStatus: null,
+        configureGitHubBtn: null
     };
     
     // Store any cells currently being edited
@@ -30,6 +33,9 @@ const IncompleteRecords = (function() {
             elements.tableBody = document.getElementById('incomplete-table-body');
             elements.saveButton = document.getElementById('save-incomplete-btn');
             elements.syncIndicator = document.getElementById('incomplete-sync-indicator');
+            elements.summaryElement = document.getElementById('incomplete-summary');
+            elements.storageStatus = document.getElementById('storage-status');
+            elements.configureGitHubBtn = document.getElementById('configure-github-btn');
             
             if (!elements.table || !elements.tableBody || !elements.saveButton) {
                 console.warn('Required DOM elements for incomplete records not found');
@@ -62,9 +68,15 @@ const IncompleteRecords = (function() {
             incompleteData = [];
             modifiedRows = new Set();
             
+            // Update storage status display
+            updateStorageStatus();
+            
             // Get incomplete records from the database
             const records = Database.getIncompleteRecords();
             incompleteData = [...records]; // Copy the array
+            
+            // Update the summary info
+            updateSummaryInfo(records);
             
             if (records.length === 0) {
                 // Show a message when there are no incomplete records
@@ -121,6 +133,64 @@ const IncompleteRecords = (function() {
             console.log(`Loaded ${records.length} incomplete records`);
         } catch (error) {
             console.error('Error loading incomplete records:', error);
+        }
+    }
+    
+    /**
+     * Update the storage status display
+     */
+    function updateStorageStatus() {
+        try {
+            if (elements.storageStatus) {
+                const mode = Database.getStorageMode();
+                if (mode === 'github') {
+                    elements.storageStatus.innerHTML = `<span class="text-success">Current: GitHub Storage</span>`;
+                    elements.configureGitHubBtn.textContent = 'Update GitHub Settings';
+                } else {
+                    elements.storageStatus.innerHTML = `<span class="text-secondary">Current: Local Storage</span>`;
+                    elements.configureGitHubBtn.textContent = 'Configure GitHub Storage';
+                }
+            }
+        } catch (error) {
+            console.error('Error updating storage status:', error);
+        }
+    }
+    
+    /**
+     * Update the summary information
+     */
+    function updateSummaryInfo(records) {
+        try {
+            if (elements.summaryElement) {
+                const stats = Database.getSummaryStats();
+                const totalRecords = stats.totalItems;
+                const incompleteCount = records.length;
+                const completeCount = totalRecords - incompleteCount;
+                const percentComplete = totalRecords > 0 ? 
+                    Math.round((completeCount / totalRecords) * 100) : 100;
+                
+                elements.summaryElement.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <p class="mb-0">Total Records: <strong>${totalRecords}</strong></p>
+                            <p class="mb-0">Complete Records: <strong>${completeCount}</strong></p>
+                            <p class="mb-0">Incomplete Records: <strong class="text-warning">${incompleteCount}</strong></p>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="display-4 mb-0">${percentComplete}%</h3>
+                            <p>Complete</p>
+                        </div>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: ${percentComplete}%" 
+                            aria-valuenow="${percentComplete}" aria-valuemin="0" aria-valuemax="100">
+                            ${percentComplete}%
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error updating summary info:', error);
         }
     }
     
@@ -238,3 +308,210 @@ const IncompleteRecords = (function() {
             }
         }
     }
+    
+    /**
+     * Save all changes to the database
+     */
+    function saveAllChanges() {
+        try {
+            // Make sure editing is finished
+            if (activeEditCell) {
+                finishEditing();
+            }
+            
+            // If no changes, do nothing
+            if (modifiedRows.size === 0) {
+                showSyncMessage('No changes to save', 'warning');
+                return;
+            }
+            
+            // Show saving indicator
+            showSyncMessage('Saving changes...', 'info', true);
+            
+            // Keep track of success
+            let success = true;
+            
+            // Save each modified record
+            for (const catalog of modifiedRows) {
+                const recordIndex = incompleteData.findIndex(r => r['Catalog #'] == catalog);
+                if (recordIndex === -1) continue;
+                
+                const updatedRecord = incompleteData[recordIndex];
+                const saveResult = Database.updateItem(catalog, updatedRecord);
+                
+                if (!saveResult) {
+                    console.error('Failed to save record:', catalog);
+                    success = false;
+                }
+            }
+            
+            // Show success or error message
+            if (success) {
+                showSyncMessage('All changes saved successfully!', 'success');
+                
+                // Clear modified rows
+                modifiedRows.clear();
+                
+                // Reload the table to refresh data and check for any remaining incomplete records
+                setTimeout(() => {
+                    loadIncompleteRecords();
+                }, 1500);
+            } else {
+                showSyncMessage('Error saving some changes', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving changes:', error);
+            showSyncMessage('Error: ' + error.message, 'danger');
+        }
+    }
+    
+    /**
+     * Show a sync status message
+     * @param {string} message - Message to display
+     * @param {string} type - Bootstrap color class (success, danger, etc.)
+     * @param {boolean} spinner - Whether to show a spinner
+     */
+    function showSyncMessage(message, type = 'success', spinner = false) {
+        try {
+            if (!elements.syncIndicator) return;
+            
+            elements.syncIndicator.innerHTML = `
+                <span class="badge bg-${type} p-2">
+                    ${spinner ? '<i class="fas fa-sync sync-spinner me-1"></i>' : ''}
+                    ${message}
+                </span>
+            `;
+            
+            // Clear message after a delay unless it's a spinner
+            if (!spinner) {
+                setTimeout(() => {
+                    if (elements.syncIndicator) {
+                        elements.syncIndicator.innerHTML = '';
+                    }
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Error showing sync message:', error);
+        }
+    }
+    
+    /**
+     * Initialize the GitHub configuration UI
+     */
+    function initGitHubConfigUI() {
+        try {
+            // Get GitHub config button and modal elements
+            const configBtn = document.getElementById('configure-github-btn');
+            const configModal = document.getElementById('github-config-modal');
+            const saveConfigBtn = document.getElementById('save-github-config');
+            
+            if (!configBtn || !configModal || !saveConfigBtn) {
+                console.warn('GitHub config UI elements not found');
+                return;
+            }
+            
+            // Add click handler for config button
+            configBtn.addEventListener('click', function() {
+                const modal = new bootstrap.Modal(configModal);
+                
+                // Pre-fill the form with current values if available
+                const owner = localStorage.getItem('zoarch_github_owner') || '';
+                const repo = localStorage.getItem('zoarch_github_repo') || '';
+                const branch = localStorage.getItem('zoarch_github_branch') || 'main';
+                const path = localStorage.getItem('zoarch_github_path') || 'data/inventory.json';
+                
+                document.getElementById('github-owner').value = owner;
+                document.getElementById('github-repo').value = repo;
+                document.getElementById('github-branch').value = branch;
+                document.getElementById('github-path').value = path;
+                
+                // Show the modal
+                modal.show();
+            });
+            
+            // Add click handler for save button
+            saveConfigBtn.addEventListener('click', async function() {
+                try {
+                    // Show working indicator
+                    saveConfigBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                    saveConfigBtn.disabled = true;
+                    
+                    // Get form values
+                    const owner = document.getElementById('github-owner').value.trim();
+                    const repo = document.getElementById('github-repo').value.trim();
+                    const branch = document.getElementById('github-branch').value.trim() || 'main';
+                    const path = document.getElementById('github-path').value.trim() || 'data/inventory.json';
+                    const token = document.getElementById('github-token').value.trim();
+                    
+                    // Validate required fields
+                    if (!owner || !repo || !token) {
+                        alert('Owner, repository, and token are required');
+                        saveConfigBtn.innerHTML = 'Save Configuration';
+                        saveConfigBtn.disabled = false;
+                        return;
+                    }
+                    
+                    // Store config in localStorage (except token, which goes to sessionStorage)
+                    localStorage.setItem('zoarch_github_owner', owner);
+                    localStorage.setItem('zoarch_github_repo', repo);
+                    localStorage.setItem('zoarch_github_branch', branch);
+                    localStorage.setItem('zoarch_github_path', path);
+                    localStorage.setItem('zoarch_use_github', 'true');
+                    
+                    // Initialize GitHub storage
+                    const config = { owner, repo, branch, path, token };
+                    const initialized = await GitHubStorage.init(config);
+                    
+                    if (initialized) {
+                        // Set the token securely
+                        GitHubStorage.setToken(token);
+                        
+                        // Set storage mode in Database
+                        Database.setStorageMode('github');
+                        
+                        // Close the modal
+                        bootstrap.Modal.getInstance(configModal).hide();
+                        
+                        // Show success message
+                        alert('GitHub configuration saved successfully! The app will now use GitHub for storage.');
+                        
+                        // Update storage status
+                        updateStorageStatus();
+                        
+                        // Refresh data if needed
+                        const confirmed = confirm('Do you want to load the data from GitHub now? Any unsaved local changes will be lost.');
+                        if (confirmed) {
+                            location.reload();
+                        }
+                    } else {
+                        alert('Failed to connect to GitHub. Please check your settings and token.');
+                    }
+                } catch (error) {
+                    console.error('Error saving GitHub config:', error);
+                    alert('Error: ' + error.message);
+                } finally {
+                    // Reset button
+                    saveConfigBtn.innerHTML = 'Save Configuration';
+                    saveConfigBtn.disabled = false;
+                }
+            });
+            
+            // Add handler for the about page button
+            const aboutGitHubBtn = document.getElementById('about-github-setup');
+            if (aboutGitHubBtn) {
+                aboutGitHubBtn.addEventListener('click', function() {
+                    configBtn.click();
+                });
+            }
+        } catch (error) {
+            console.error('Error initializing GitHub config UI:', error);
+        }
+    }
+    
+    // Public API
+    return {
+        init,
+        loadIncompleteRecords,
+        saveAllChanges
+    };
+})();
