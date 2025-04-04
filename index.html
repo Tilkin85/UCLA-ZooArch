@@ -549,5 +549,77 @@
         }
       });
     </script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Get save config button
+    const saveConfigBtn = document.getElementById('save-github-config');
+    
+    if (saveConfigBtn) {
+      saveConfigBtn.addEventListener('click', async function() {
+        try {
+          // Show working indicator
+          saveConfigBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+          saveConfigBtn.disabled = true;
+          
+          // Get form values
+          const owner = document.getElementById('github-owner').value.trim();
+          const repo = document.getElementById('github-repo').value.trim();
+          const branch = document.getElementById('github-branch').value.trim() || 'main';
+          const path = document.getElementById('github-path').value.trim() || 'data/inventory.json';
+          const token = document.getElementById('github-token').value.trim();
+          
+          // Validate required fields
+          if (!owner || !repo || !token) {
+            alert('Owner, repository, and token are required');
+            saveConfigBtn.innerHTML = 'Save Configuration';
+            saveConfigBtn.disabled = false;
+            return;
+          }
+          
+          // Store config in localStorage (except token, which goes to sessionStorage)
+          localStorage.setItem('zoarch_github_owner', owner);
+          localStorage.setItem('zoarch_github_repo', repo);
+          localStorage.setItem('zoarch_github_branch', branch);
+          localStorage.setItem('zoarch_github_path', path);
+          localStorage.setItem('zoarch_use_github', 'true');
+          
+          // Store token in sessionStorage
+          sessionStorage.setItem('zoarch_github_token', token);
+          
+          // Close the modal
+          const configModal = document.getElementById('github-config-modal');
+          const modal = bootstrap.Modal.getInstance(configModal);
+          if (modal) {
+            modal.hide();
+          }
+          
+          // Show success message
+          alert('GitHub configuration saved successfully! The app will now use GitHub for storage.');
+          
+          // Update storage status if we have that function
+          if (typeof updateStorageStatus === 'function') {
+            updateStorageStatus();
+          }
+          
+          // Refresh data if needed
+          const confirmed = confirm('Do you want to reload the page to apply the GitHub settings? Any unsaved changes will be lost.');
+          if (confirmed) {
+            location.reload();
+          }
+        } catch (error) {
+          console.error('Error saving GitHub config:', error);
+          alert('Error: ' + error.message);
+        } finally {
+          // Reset button
+          saveConfigBtn.innerHTML = 'Save Configuration';
+          saveConfigBtn.disabled = false;
+        }
+      });
+      console.log('GitHub save config button handler added');
+    } else {
+      console.error('GitHub save config button not found');
+    }
+  });
+</script>
 </body>
 </html>
