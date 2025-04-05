@@ -26,9 +26,11 @@ const GitHubStorage = (function() {
                 // Apply user configuration
                 config = { ...config, ...userConfig };
                 
-                // Validate required config
-                if (!config.owner || !config.repo) {
-                    throw new Error('GitHub owner and repo are required');
+               // Validate required config - only if trying to test connection
+            if (config.token && (config.owner === undefined || config.repo === undefined)) {
+                console.warn('GitHub owner and repo are not provided');
+                resolve(false); // Don't reject, just return false
+                return;
                 }
                 
                 // Try to get stored token from sessionStorage (more secure than localStorage)
