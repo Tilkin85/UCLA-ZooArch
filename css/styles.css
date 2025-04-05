@@ -102,5 +102,126 @@
     #incomplete-table th, 
     #incomplete-table td {
         min-width: 120px;
+/* 
+ * ZOARCH Lab Inventory - Tabbed Interface Styles
+ * Add this to styles.css
+ */
+
+/* Tab container styles */
+.taxonomy-tabs {
+    margin-bottom: 1.5rem;
+}
+
+/* Tab navigation styles */
+.taxonomy-tabs .nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.taxonomy-tabs .nav-link {
+    margin-bottom: -1px;
+    border: 1px solid transparent;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.taxonomy-tabs .nav-link:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-color: #e9ecef #e9ecef #dee2e6;
+}
+
+.taxonomy-tabs .nav-link.active {
+    color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+    font-weight: 500;
+}
+
+/* Badge styling */
+.taxonomy-tabs .nav-link .badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+    vertical-align: middle;
+}
+
+/* Table container styling */
+.taxonomy-tabs .tab-content {
+    background-color: white;
+}
+
+.taxonomy-tabs .table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+    border-radius: 0.25rem;
+}
+
+/* Scrollbar customization */
+.taxonomy-tabs .table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.taxonomy-tabs .table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.taxonomy-tabs .table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.taxonomy-tabs .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Table header styling */
+.taxonomy-tabs table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 10;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Empty cell styling */
+.taxonomy-tabs .incomplete-cell::before {
+    content: "Empty";
+    color: #dc3545;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* Active row highlight */
+.taxonomy-tabs tr.active-edit {
+    background-color: rgba(0, 123, 255, 0.1) !important;
+}
+
+/* Animation for tab transitions */
+.taxonomy-tabs .tab-pane.fade {
+    transition: opacity 0.15s linear;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .taxonomy-tabs .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .taxonomy-tabs .nav-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .taxonomy-tabs .nav-tabs::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+    }
+    
+    .taxonomy-tabs .nav-item {
+        margin-right: 2px;
     }
 }
