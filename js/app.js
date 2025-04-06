@@ -5,13 +5,18 @@
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize the application
-    initApp();
+    initApp().then(() => {
+        // After everything is loaded, modify the save function
+        modifyIncompleteRecordsSaveFunction();
+    }).catch(error => {
+        console.error("Error during initialization:", error);
+    });
 });
 
 /**
  * Initialize the application
  */
-async async function initApp() {
+async function initApp() {
     // Show loading indicator
     console.log('Loading...');
     
@@ -131,56 +136,6 @@ async async function initApp() {
         console.log('Loading complete');
     }
 }
-        
-        // Check for GitHub configuration
-        const useGitHub = localStorage.getItem('zoarch_use_github') === 'true';
-        const config = {
-            useGitHub: useGitHub,
-            github: {}
-        };
-        
-        // Initialize the database
-        await Database.init(config);
-        
-        // Setup UI elements
-        setupNavigation();
-        setupEventListeners();
-        
-        // Load and display initial data
-        loadDashboardData();
-        loadInventoryTable();
-        
-        // Initialize incomplete records if available
-        try {
-            if (typeof IncompleteRecords !== 'undefined' && IncompleteRecords && typeof IncompleteRecords.init === 'function') {
-                IncompleteRecords.init();
-                // Immediately load incomplete records so they're ready when the tab is clicked
-                IncompleteRecords.loadIncompleteRecords();
-            } else {
-                console.warn("IncompleteRecords module not available");
-            }
-        } catch (incompleteError) {
-            console.warn("Error initializing incomplete records:", incompleteError);
-        }
-        
-        // Initialize charts if available
-        try {
-            if (typeof Charts !== 'undefined' && Charts && typeof Charts.initCharts === 'function') {
-                Charts.initCharts(Database.getChartData());
-            } else {
-                console.warn("Charts module not available, skipping chart initialization");
-            }
-        } catch (chartError) {
-            console.warn("Error initializing charts, continuing without visualizations:", chartError);
-        }
-        
-        console.log('Loading complete');
-    } catch (error) {
-        console.error('Error initializing app:', error);
-        alert('There was an error initializing the application. Please check the console for details.');
-        console.log('Loading complete');
-    }
-}
 
 /**
  * Setup navigation between sections
@@ -238,12 +193,6 @@ function setupNavigation() {
         console.error('Error setting up navigation:', error);
     }
 }
-            });
-        });
-    } catch (error) {
-        console.error('Error setting up navigation:', error);
-    }
-}
 
 /**
  * Setup event listeners for various UI interactions
@@ -273,11 +222,21 @@ function setupEventListeners() {
                         
                         // Reload data and update UI
                         loadDashboardData();
-                        loadInventoryTable();
+                        
+                        // Update tabbed inventory if available
+                        if (typeof TabbedInventory !== 'undefined' && 
+                            typeof TabbedInventory.refreshAllTabs === 'function') {
+                            TabbedInventory.refreshAllTabs();
+                        } else {
+                            loadInventoryTable();
+                        }
                         
                         // Update incomplete records if available
-                        if (typeof IncompleteRecords !== 'undefined' && 
-                            typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                        if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                            typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
+                            TabbedIncompleteRecords.refreshAllTabs();
+                        } else if (typeof IncompleteRecords !== 'undefined' && 
+                                  typeof IncompleteRecords.loadIncompleteRecords === 'function') {
                             IncompleteRecords.loadIncompleteRecords();
                         }
                         
@@ -337,11 +296,21 @@ function setupEventListeners() {
                     
                     // Reload data and update UI
                     loadDashboardData();
-                    loadInventoryTable();
+                    
+                    // Update tabbed inventory if available
+                    if (typeof TabbedInventory !== 'undefined' && 
+                        typeof TabbedInventory.refreshAllTabs === 'function') {
+                        TabbedInventory.refreshAllTabs();
+                    } else {
+                        loadInventoryTable();
+                    }
                     
                     // Update incomplete records if available
-                    if (typeof IncompleteRecords !== 'undefined' && 
-                        typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                    if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                        typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
+                        TabbedIncompleteRecords.refreshAllTabs();
+                    } else if (typeof IncompleteRecords !== 'undefined' && 
+                              typeof IncompleteRecords.loadIncompleteRecords === 'function') {
                         IncompleteRecords.loadIncompleteRecords();
                     }
                     
@@ -368,40 +337,49 @@ function setupEventListeners() {
  */
 function setupExportButtons() {
     try {
-        // Create export buttons container
-        const exportContainer = document.createElement('div');
-        exportContainer.className = 'row mt-3';
-        exportContainer.innerHTML = `
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Export Data</h5>
-                        <p>Download your inventory data in Excel or CSV format.</p>
-                        <div class="d-flex gap-2">
-                            <button id="export-excel-btn" class="btn btn-primary">
-                                <i class="fas fa-file-excel"></i> Export to Excel
-                            </button>
-                            <button id="export-csv-btn" class="btn btn-secondary">
-                                <i class="fas fa-file-csv"></i> Export to CSV
-                            </button>
+        // Create export buttons container if they don't already exist
+        if (!document.getElementById('export-excel-btn')) {
+            const exportContainer = document.createElement('div');
+            exportContainer.className = 'row mt-3';
+            exportContainer.innerHTML = `
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Export Data</h5>
+                            <p>Download your inventory data in Excel or CSV format.</p>
+                            <div class="d-flex gap-2">
+                                <button id="export-excel-btn" class="btn btn-primary">
+                                    <i class="fas fa-file-excel"></i> Export to Excel
+                                </button>
+                                <button id="export-csv-btn" class="btn btn-secondary">
+                                    <i class="fas fa-file-csv"></i> Export to CSV
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-        
-        // Find update section to append the buttons
-        const updateSection = document.getElementById('update');
-        if (updateSection) {
-            // Find a good place to insert it (after the import section)
-            const importSection = updateSection.querySelector('.row').nextElementSibling;
-            if (importSection) {
-                updateSection.insertBefore(exportContainer, importSection);
-                
-                // Add event listeners for export buttons
-                document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
-                document.getElementById('export-csv-btn').addEventListener('click', exportToCSV);
+            `;
+            
+            // Find update section to append the buttons
+            const updateSection = document.getElementById('update');
+            if (updateSection) {
+                // Find a good place to insert it (after the import section)
+                const importSection = updateSection.querySelector('.row').nextElementSibling;
+                if (importSection) {
+                    updateSection.insertBefore(exportContainer, importSection);
+                }
             }
+        }
+        
+        // Add event listeners for export buttons
+        const excelBtn = document.getElementById('export-excel-btn');
+        if (excelBtn) {
+            excelBtn.addEventListener('click', exportToExcel);
+        }
+        
+        const csvBtn = document.getElementById('export-csv-btn');
+        if (csvBtn) {
+            csvBtn.addEventListener('click', exportToCSV);
         }
     } catch (error) {
         console.error('Error setting up export buttons:', error);
@@ -481,13 +459,15 @@ function exportToCSV() {
  */
 function setupGitHubStatus() {
     try {
-        // Create status indicator
-        const statusIndicator = document.createElement('div');
-        statusIndicator.id = 'github-status';
-        statusIndicator.className = 'position-fixed bottom-0 end-0 m-3';
-        
-        // Add to document
-        document.body.appendChild(statusIndicator);
+        // Create status indicator if it doesn't exist
+        if (!document.getElementById('github-status')) {
+            const statusIndicator = document.createElement('div');
+            statusIndicator.id = 'github-status';
+            statusIndicator.className = 'position-fixed bottom-0 end-0 m-3';
+            
+            // Add to document
+            document.body.appendChild(statusIndicator);
+        }
         
         // Update status based on storage mode
         updateGitHubStatus();
@@ -764,13 +744,37 @@ function showItemDetails(catalogNum) {
                     
                     // Flash the row with this catalog
                     setTimeout(() => {
-                        const row = document.querySelector(`#incomplete-table tr[data-catalog="${catalog}"]`);
-                        if (row) {
-                            row.classList.add('bg-info');
-                            setTimeout(() => row.classList.remove('bg-info'), 2000);
-                            
-                            // Scroll to the row
-                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Try to find in tabbed interface first
+                        const tabRows = document.querySelectorAll(`.taxonomy-tabs tr[data-catalog="${catalog}"]`);
+                        if (tabRows.length > 0) {
+                            // If we found it in tabs, highlight it
+                            tabRows.forEach(row => {
+                                row.classList.add('bg-info');
+                                setTimeout(() => row.classList.remove('bg-info'), 2000);
+                                
+                                // Scroll to the row
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                
+                                // Click on the tab that contains this row
+                                const tabPane = row.closest('.tab-pane');
+                                if (tabPane) {
+                                    const tabId = tabPane.id;
+                                    const tab = document.querySelector(`[data-bs-target="#${tabId}"]`);
+                                    if (tab) {
+                                        tab.click();
+                                    }
+                                }
+                            });
+                        } else {
+                            // Otherwise look in the original interface
+                            const row = document.querySelector(`#incomplete-table tr[data-catalog="${catalog}"]`);
+                            if (row) {
+                                row.classList.add('bg-info');
+                                setTimeout(() => row.classList.remove('bg-info'), 2000);
+                                
+                                // Scroll to the row
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
                         }
                     }, 500);
                 }
@@ -803,4 +807,32 @@ function isIncompleteRecord(item) {
     return requiredFields.some(field => 
         !item[field] || item[field].toString().trim() === ''
     );
+}
+
+/**
+ * Function to modify the save behavior for incomplete records
+ * to work with the tabbed interface
+ */
+function modifyIncompleteRecordsSaveFunction() {
+    // Only modify if both modules exist
+    if (typeof IncompleteRecords !== 'undefined' && 
+        typeof TabbedIncompleteRecords !== 'undefined' &&
+        typeof TabbedIncompleteRecords.saveAllChanges === 'function') {
+        
+        // Store the original function
+        const originalSaveFunction = IncompleteRecords.saveAllChanges;
+        
+        // Override with a function that checks which interface is active
+        IncompleteRecords.saveAllChanges = function() {
+            // Check if the tabbed interface is active
+            const tabsElement = document.querySelector('#incompleteTaxonomyTabs');
+            if (tabsElement && window.getComputedStyle(tabsElement).display !== 'none') {
+                // Use the tabbed interface save function
+                TabbedIncompleteRecords.saveAllChanges();
+            } else {
+                // Use the original save function
+                originalSaveFunction();
+            }
+        };
+    }
 }
