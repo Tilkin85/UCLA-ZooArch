@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /**
  * Initialize the application
  */
-async function initApp() {
+async async function initApp() {
     // Show loading indicator
     console.log('Loading...');
     
@@ -20,6 +20,117 @@ async function initApp() {
         if (typeof Database === 'undefined') {
             throw new Error('Database module not loaded properly');
         }
+        
+        // Check for GitHub configuration
+        const useGitHub = localStorage.getItem('zoarch_use_github') === 'true';
+        const config = {
+            useGitHub: useGitHub,
+            github: {}
+        };
+        
+        // Initialize the database
+        await Database.init(config);
+        
+        // Setup UI elements
+        setupNavigation();
+        setupEventListeners();
+        
+        // Load and display initial data
+        loadDashboardData();
+        
+        // Initialize the tabbed inventory display (if available)
+        try {
+            if (typeof TabbedInventory !== 'undefined' && 
+                TabbedInventory && 
+                typeof TabbedInventory.init === 'function') {
+                const tabInit = TabbedInventory.init();
+                if (tabInit) {
+                    console.log('Tabbed inventory initialized');
+                    // Load data for the active tab
+                    const activeTab = document.querySelector('#taxonomyTabContent .tab-pane.active table');
+                    if (activeTab) {
+                        TabbedInventory.loadTabData(activeTab.id);
+                    }
+                } else {
+                    // Fall back to normal inventory loading
+                    loadInventoryTable();
+                }
+            } else {
+                // Fall back to normal inventory loading
+                loadInventoryTable();
+            }
+        } catch (tabError) {
+            console.warn("Error initializing tabbed inventory, falling back to standard view:", tabError);
+            loadInventoryTable();
+        }
+        
+        // Initialize incomplete records if available
+        try {
+            if (typeof IncompleteRecords !== 'undefined' && 
+                IncompleteRecords && 
+                typeof IncompleteRecords.init === 'function') {
+                IncompleteRecords.init();
+            }
+        } catch (incompleteError) {
+            console.warn("Error initializing incomplete records:", incompleteError);
+        }
+        
+        // Initialize tabbed incomplete records if available
+        try {
+            if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                TabbedIncompleteRecords && 
+                typeof TabbedIncompleteRecords.init === 'function') {
+                const tabInit = TabbedIncompleteRecords.init();
+                if (tabInit) {
+                    console.log('Tabbed incomplete records initialized');
+                    // Load data for the active tab
+                    const activeTab = document.querySelector('#incompleteTaxonomyTabContent .tab-pane.active table');
+                    if (activeTab) {
+                        TabbedIncompleteRecords.loadTabData(activeTab.id);
+                    }
+                } else {
+                    // Fall back to normal loading
+                    if (typeof IncompleteRecords !== 'undefined' && 
+                        IncompleteRecords && 
+                        typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                        IncompleteRecords.loadIncompleteRecords();
+                    }
+                }
+            } else {
+                // Fall back to normal loading
+                if (typeof IncompleteRecords !== 'undefined' && 
+                    IncompleteRecords && 
+                    typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                    IncompleteRecords.loadIncompleteRecords();
+                }
+            }
+        } catch (tabIncompleteError) {
+            console.warn("Error initializing tabbed incomplete records, falling back to standard view:", tabIncompleteError);
+            if (typeof IncompleteRecords !== 'undefined' && 
+                IncompleteRecords && 
+                typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                IncompleteRecords.loadIncompleteRecords();
+            }
+        }
+        
+        // Initialize charts if available
+        try {
+            if (typeof Charts !== 'undefined' && Charts && typeof Charts.initCharts === 'function') {
+                Charts.initCharts(Database.getChartData());
+            } else {
+                console.warn("Charts module not available, skipping chart initialization");
+            }
+        } catch (chartError) {
+            console.warn("Error initializing charts, continuing without visualizations:", chartError);
+        }
+        
+        console.log('Loading complete');
+    } catch (error) {
+        console.error('Error initializing app:', error);
+        alert('There was an error initializing the application. Please check the console for details.');
+        console.log('Loading complete');
+    }
+}
         
         // Check for GitHub configuration
         const useGitHub = localStorage.getItem('zoarch_use_github') === 'true';
@@ -100,14 +211,33 @@ function setupNavigation() {
                 if (section) {
                     section.classList.remove('d-none');
                     
+                    // Special handling for inventory tab
+                    if (sectionId === 'inventory' && 
+                        typeof TabbedInventory !== 'undefined' && 
+                        typeof TabbedInventory.refreshAllTabs === 'function') {
+                        // Refresh tabs in case data has changed
+                        TabbedInventory.refreshAllTabs();
+                    }
+                    
                     // Special handling for incomplete tab
-                    if (sectionId === 'incomplete' && 
-                        typeof IncompleteRecords !== 'undefined' && 
-                        typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-                        // Reload incomplete records when tab is shown
-                        IncompleteRecords.loadIncompleteRecords();
+                    if (sectionId === 'incomplete') {
+                        if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                            typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
+                            // Use tabbed interface if available
+                            TabbedIncompleteRecords.refreshAllTabs();
+                        } else if (typeof IncompleteRecords !== 'undefined' && 
+                                  typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                            // Fall back to original interface
+                            IncompleteRecords.loadIncompleteRecords();
+                        }
                     }
                 }
+            });
+        });
+    } catch (error) {
+        console.error('Error setting up navigation:', error);
+    }
+}
             });
         });
     } catch (error) {
