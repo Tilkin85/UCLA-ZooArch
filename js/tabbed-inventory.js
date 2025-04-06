@@ -1,6 +1,6 @@
 /**
- * ZOARCH Lab Inventory - Tabbed Inventory Display
- * This component organizes inventory data into taxonomic category tabs
+ * ZOARCH Lab Inventory - Simplified Tabbed Inventory Display
+ * Minimal version to ensure basic functionality
  */
 
 // TabbedInventory namespace
@@ -19,73 +19,121 @@ const TabbedInventory = (function() {
      * Initialize the tabbed inventory display
      */
     function init() {
+        console.log('Initializing simplified tabbed inventory...');
         try {
-            // Get DOM elements
+            // Get inventory section
             const inventorySection = document.getElementById('inventory');
             if (!inventorySection) {
-                console.warn('Inventory section not found');
+                console.error('Inventory section not found');
                 return false;
             }
             
-            // Find the existing table container
-            const existingTableContainer = inventorySection.querySelector('.table-responsive');
-            if (!existingTableContainer) {
-                console.warn('Existing table container not found');
-                return false;
+            // Create the tabbed content div
+            const tabbedContent = document.createElement('div');
+            tabbedContent.className = 'taxonomy-tabs mt-4';
+            tabbedContent.innerHTML = createTabHTML();
+            
+            // Find a good place to insert it
+            const contentDiv = inventorySection.querySelector('.col-12');
+            if (!contentDiv) {
+                // If no .col-12, just append to the section itself
+                inventorySection.appendChild(tabbedContent);
+            } else {
+                // Clear the content div except for the h2 and p elements
+                const header = contentDiv.querySelector('h2');
+                const paragraph = contentDiv.querySelector('p');
+                
+                contentDiv.innerHTML = '';
+                
+                // Add back the header and paragraph if they existed
+                if (header) contentDiv.appendChild(header);
+                if (paragraph) contentDiv.appendChild(paragraph);
+                
+                // Add the tabbed content
+                contentDiv.appendChild(tabbedContent);
             }
             
-            // Create parent container for tabs
-            const tabContainer = document.createElement('div');
-            tabContainer.className = 'taxonomy-tabs mt-4';
+            // Add event listeners for tab changes
+            const tabButtons = document.querySelectorAll('#taxonomyTabs .nav-link');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Prevent default action
+                    e.preventDefault();
+                    
+                    // Get target tab
+                    const target = this.getAttribute('data-bs-target');
+                    
+                    // Remove active class from all tabs and panes
+                    document.querySelectorAll('#taxonomyTabs .nav-link').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    document.querySelectorAll('#taxonomyTabContent .tab-pane').forEach(pane => {
+                        pane.classList.remove('show', 'active');
+                    });
+                    
+                    // Add active class to clicked tab and corresponding pane
+                    this.classList.add('active');
+                    const pane = document.querySelector(target);
+                    if (pane) {
+                        pane.classList.add('show', 'active');
+                        
+                        // Load data for this tab if needed
+                        const tableId = pane.querySelector('table')?.id;
+                        if (tableId) {
+                            loadTabData(tableId);
+                        }
+                    }
+                });
+            });
             
-            // Create the tab structure inside this container
-            tabContainer.innerHTML = createTabStructureHTML();
+            // Load data for the initial active tab
+            const activeTab = document.querySelector('#taxonomyTabContent .tab-pane.active table');
+            if (activeTab) {
+                loadTabData(activeTab.id);
+            }
             
-            // Replace the existing table with the tabbed structure
-            existingTableContainer.parentNode.replaceChild(tabContainer, existingTableContainer);
-            
-            // Setup event listeners for tab navigation
-            setupTabEventListeners();
-            
-            console.log('Tabbed inventory initialized successfully');
+            console.log('Simplified tabbed inventory initialized successfully');
             return true;
         } catch (error) {
-            console.error('Error initializing tabbed inventory:', error);
+            console.error('Error initializing simplified tabbed inventory:', error);
             return false;
         }
     }
     
     /**
-     * Create the HTML for tab structure
+     * Create the HTML for the tabbed interface
      */
-    function createTabStructureHTML() {
-        // Create tab navigation HTML
-        let navTabsHTML = `
-            <ul class="nav nav-tabs" id="taxonomyTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-content" 
-                        type="button" role="tab" aria-controls="all-content" aria-selected="true">All</button>
-                </li>
+    function createTabHTML() {
+        // Start with the tabs
+        let html = '<ul class="nav nav-tabs" id="taxonomyTabs" role="tablist">';
+        
+        // Add the "All" tab
+        html += `
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-content" 
+                    role="tab" aria-controls="all-content" aria-selected="true">All</a>
+            </li>
         `;
         
         // Add tabs for each taxonomic group
-        Object.keys(taxonomicGroups).forEach((group) => {
+        Object.keys(taxonomicGroups).forEach(group => {
             const groupId = group.toLowerCase().replace(/\W+/g, '-');
-            navTabsHTML += `
+            html += `
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="${groupId}-tab" data-bs-toggle="tab" data-bs-target="#${groupId}-content" 
-                        type="button" role="tab" aria-controls="${groupId}-content" aria-selected="false">${group}</button>
+                    <a class="nav-link" id="${groupId}-tab" data-bs-toggle="tab" data-bs-target="#${groupId}-content" 
+                        role="tab" aria-controls="${groupId}-content" aria-selected="false">${group}</a>
                 </li>
             `;
         });
         
-        navTabsHTML += `</ul>`;
+        // Close the tabs
+        html += '</ul>';
         
-        // Create tab content HTML
-        let tabContentHTML = `<div class="tab-content border border-top-0 rounded-bottom p-3" id="taxonomyTabContent">`;
+        // Start the tab content
+        html += '<div class="tab-content border border-top-0 rounded-bottom p-3" id="taxonomyTabContent">';
         
-        // Add "All" tab content
-        tabContentHTML += `
+        // Add the "All" tab content
+        html += `
             <div class="tab-pane fade show active" id="all-content" role="tabpanel" aria-labelledby="all-tab">
                 <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                     <table id="all-inventory-table" class="table table-striped table-hover">
@@ -111,9 +159,9 @@ const TabbedInventory = (function() {
         `;
         
         // Add content for each taxonomic group
-        Object.keys(taxonomicGroups).forEach((group) => {
+        Object.keys(taxonomicGroups).forEach(group => {
             const groupId = group.toLowerCase().replace(/\W+/g, '-');
-            tabContentHTML += `
+            html += `
                 <div class="tab-pane fade" id="${groupId}-content" role="tabpanel" aria-labelledby="${groupId}-tab">
                     <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                         <table id="${groupId}-inventory-table" class="table table-striped table-hover">
@@ -139,33 +187,10 @@ const TabbedInventory = (function() {
             `;
         });
         
-        tabContentHTML += `</div>`;
+        // Close the tab content
+        html += '</div>';
         
-        // Combine navigation and content
-        return navTabsHTML + tabContentHTML;
-    }
-    
-    /**
-     * Setup event listeners for tab changes
-     */
-    function setupTabEventListeners() {
-        // Get all tab buttons
-        const tabButtons = document.querySelectorAll('#taxonomyTabs button[data-bs-toggle="tab"]');
-        
-        // Add listener for tab show event
-        tabButtons.forEach(button => {
-            button.addEventListener('shown.bs.tab', function(event) {
-                const targetId = event.target.getAttribute('data-bs-target');
-                const targetPane = document.querySelector(targetId);
-                if (targetPane) {
-                    const tableId = targetPane.querySelector('table')?.id;
-                    if (tableId) {
-                        // Load data for this tab if needed
-                        loadTabData(tableId);
-                    }
-                }
-            });
-        });
+        return html;
     }
     
     /**
@@ -173,17 +198,25 @@ const TabbedInventory = (function() {
      */
     function loadTabData(tableId) {
         try {
+            console.log(`Loading data for tab: ${tableId}`);
             const table = document.getElementById(tableId);
-            if (!table) return;
+            if (!table) {
+                console.error(`Table element not found: ${tableId}`);
+                return;
+            }
             
             const tableBody = table.querySelector('tbody');
-            if (!tableBody) return;
+            if (!tableBody) {
+                console.error(`Table body not found for: ${tableId}`);
+                return;
+            }
             
             // Clear existing table content
             tableBody.innerHTML = '';
             
             // Get all data
             const allData = Database.getAllData();
+            console.log(`Retrieved ${allData.length} records from database`);
             
             // Filter data based on tab ID
             let filteredData = allData;
@@ -212,7 +245,32 @@ const TabbedInventory = (function() {
                 }
             }
             
-            // Populate table with filtered data
+            console.log(`Filtered to ${filteredData.length} records for ${tableId}`);
+            
+            // Add count to the tab
+            const tabId = tableId.replace('-inventory-table', '-tab');
+            const tab = document.getElementById(tabId);
+            if (tab) {
+                // Remove existing badge if any
+                const existingBadge = tab.querySelector('.badge');
+                if (existingBadge) {
+                    tab.removeChild(existingBadge);
+                }
+                
+                // Add new badge
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary ms-2';
+                badge.textContent = filteredData.length;
+                tab.appendChild(badge);
+            }
+            
+            // If no data, show a message
+            if (filteredData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="9" class="text-center">No items found in this category</td></tr>';
+                return;
+            }
+            
+            // Add rows to the table
             filteredData.forEach(item => {
                 const row = document.createElement('tr');
                 
@@ -245,44 +303,30 @@ const TabbedInventory = (function() {
             detailsButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const catalogNum = this.getAttribute('data-catalog');
-                    if (typeof showItemDetails === 'function') {
-                        showItemDetails(catalogNum);
+                    if (typeof window.showItemDetails === 'function') {
+                        window.showItemDetails(catalogNum);
                     } else {
-                        console.warn('showItemDetails function not available');
+                        console.warn('showItemDetails function not found in global scope');
+                        alert(`Details for catalog #${catalogNum}`);
                     }
                 });
             });
             
-            // Add a count indicator
-            const firstRow = tableBody.querySelector('tr');
-            if (!firstRow) {
-                tableBody.innerHTML = `<tr><td colspan="9" class="text-center">No items found in this category</td></tr>`;
-            } else {
-                // Add count to the tab if not already added
-                const tabId = tableId.replace('-inventory-table', '-tab');
-                const tab = document.getElementById(tabId);
-                if (tab) {
-                    // Remove existing badge if any
-                    const existingBadge = tab.querySelector('.badge');
-                    if (existingBadge) {
-                        existingBadge.remove();
-                    }
-                    
-                    // Add new badge
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-secondary ms-2';
-                    badge.textContent = filteredData.length;
-                    tab.appendChild(badge);
-                }
-            }
+            console.log(`Tab ${tableId} data loaded successfully`);
         } catch (error) {
             console.error(`Error loading data for tab ${tableId}:`, error);
+            const table = document.getElementById(tableId);
+            if (table) {
+                const tableBody = table.querySelector('tbody');
+                if (tableBody) {
+                    tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error loading data: ${error.message}</td></tr>`;
+                }
+            }
         }
     }
     
     /**
      * Check if a record has incomplete fields
-     * (Copy of the function from app.js to avoid dependencies)
      */
     function isIncompleteRecord(item) {
         // Define required fields
@@ -301,6 +345,7 @@ const TabbedInventory = (function() {
      */
     function refreshAllTabs() {
         try {
+            console.log('Refreshing all taxonomy tabs');
             // Get all tab content containers
             const tabPanes = document.querySelectorAll('#taxonomyTabContent .tab-pane');
             
