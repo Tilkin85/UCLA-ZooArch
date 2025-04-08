@@ -1,5 +1,6 @@
 /**
  * ZOARCH Lab Inventory - Simplified Tabbed Inventory Display
+ * Minimal version to ensure basic functionality
  */
 
 // TabbedInventory namespace
@@ -18,7 +19,7 @@ const TabbedInventory = (function() {
      * Initialize the tabbed inventory display
      */
     function init() {
-        console.log('Initializing tabbed inventory...');
+        console.log('Initializing simplified tabbed inventory...');
         try {
             // Get inventory section
             const inventorySection = document.getElementById('inventory');
@@ -56,8 +57,13 @@ const TabbedInventory = (function() {
             const tabButtons = document.querySelectorAll('#taxonomyTabs .nav-link');
             tabButtons.forEach(button => {
                 button.addEventListener('click', function(e) {
+                    // Prevent default action
                     e.preventDefault();
                     
+                    // Get target tab
+                    const target = this.getAttribute('data-bs-target');
+                    
+                    // Remove active class from all tabs and panes
                     document.querySelectorAll('#taxonomyTabs .nav-link').forEach(tab => {
                         tab.classList.remove('active');
                     });
@@ -65,12 +71,13 @@ const TabbedInventory = (function() {
                         pane.classList.remove('show', 'active');
                     });
                     
+                    // Add active class to clicked tab and corresponding pane
                     this.classList.add('active');
-                    const target = this.getAttribute('data-bs-target');
                     const pane = document.querySelector(target);
                     if (pane) {
                         pane.classList.add('show', 'active');
                         
+                        // Load data for this tab if needed
                         const tableId = pane.querySelector('table')?.id;
                         if (tableId) {
                             loadTabData(tableId);
@@ -85,10 +92,10 @@ const TabbedInventory = (function() {
                 loadTabData(activeTab.id);
             }
             
-            console.log('Tabbed inventory initialized successfully');
+            console.log('Simplified tabbed inventory initialized successfully');
             return true;
         } catch (error) {
-            console.error('Error initializing tabbed inventory:', error);
+            console.error('Error initializing simplified tabbed inventory:', error);
             return false;
         }
     }
@@ -193,16 +200,23 @@ const TabbedInventory = (function() {
         try {
             console.log(`Loading data for tab: ${tableId}`);
             const table = document.getElementById(tableId);
-            if (!table) return;
+            if (!table) {
+                console.error(`Table element not found: ${tableId}`);
+                return;
+            }
             
             const tableBody = table.querySelector('tbody');
-            if (!tableBody) return;
+            if (!tableBody) {
+                console.error(`Table body not found for: ${tableId}`);
+                return;
+            }
             
             // Clear existing table content
             tableBody.innerHTML = '';
             
             // Get all data
             const allData = Database.getAllData();
+            console.log(`Retrieved ${allData.length} records from database`);
             
             // Filter data based on tab ID
             let filteredData = allData;
@@ -210,11 +224,11 @@ const TabbedInventory = (function() {
             // If not the "all" tab, filter by taxonomic group
             if (tableId !== 'all-inventory-table') {
                 // Extract group name from the table ID
-                const groupId = tableId.replace('-inventory-table', '');
+                const groupName = tableId.replace('-inventory-table', '').replace(/-/g, ' ');
                 
                 // Find the matching taxonomic group
                 const groupKey = Object.keys(taxonomicGroups).find(key => 
-                    key.toLowerCase().replace(/\W+/g, '-') === groupId
+                    key.toLowerCase() === groupName
                 );
                 
                 if (groupKey) {
@@ -225,24 +239,30 @@ const TabbedInventory = (function() {
                         filteredData = allData.filter(item => orders.includes(item.Order));
                     } else {
                         // For "Other/Unclassified", include items not in any defined group
-                        const allDefinedOrders = [];
-                        Object.keys(taxonomicGroups).forEach(key => {
-                            if (key !== 'Other/Unclassified') {
-                                taxonomicGroups[key].forEach(order => {
-                                    if (order) allDefinedOrders.push(order);
-                                });
-                            }
-                        });
-                        
-                        filteredData = allData.filter(item => 
-                            item.Order && !allDefinedOrders.includes(item.Order)
-                        );
+                        const allDefinedOrders = Object.values(taxonomicGroups).flat();
+                        filteredData = allData.filter(item => !allDefinedOrders.includes(item.Order));
                     }
                 }
             }
             
-            // Update tab count
-            updateTabCount(tableId, filteredData.length);
+            console.log(`Filtered to ${filteredData.length} records for ${tableId}`);
+            
+            // Add count to the tab
+            const tabId = tableId.replace('-inventory-table', '-tab');
+            const tab = document.getElementById(tabId);
+            if (tab) {
+                // Remove existing badge if any
+                const existingBadge = tab.querySelector('.badge');
+                if (existingBadge) {
+                    tab.removeChild(existingBadge);
+                }
+                
+                // Add new badge
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary ms-2';
+                badge.textContent = filteredData.length;
+                tab.appendChild(badge);
+            }
             
             // If no data, show a message
             if (filteredData.length === 0) {
@@ -286,39 +306,22 @@ const TabbedInventory = (function() {
                     if (typeof window.showItemDetails === 'function') {
                         window.showItemDetails(catalogNum);
                     } else {
-                        console.warn('showItemDetails function not found');
+                        console.warn('showItemDetails function not found in global scope');
                         alert(`Details for catalog #${catalogNum}`);
                     }
                 });
             });
+            
+            console.log(`Tab ${tableId} data loaded successfully`);
         } catch (error) {
             console.error(`Error loading data for tab ${tableId}:`, error);
-        }
-    }
-    
-    /**
-     * Update the count badge on a tab
-     */
-    function updateTabCount(tableId, count) {
-        try {
-            const tabId = tableId.replace('-inventory-table', '-tab');
-            const tab = document.getElementById(tabId);
-            
-            if (tab) {
-                // Remove existing badge if any
-                const existingBadge = tab.querySelector('.badge');
-                if (existingBadge) {
-                    existingBadge.remove();
+            const table = document.getElementById(tableId);
+            if (table) {
+                const tableBody = table.querySelector('tbody');
+                if (tableBody) {
+                    tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error loading data: ${error.message}</td></tr>`;
                 }
-                
-                // Add new badge with count
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-secondary ms-2';
-                badge.textContent = count;
-                tab.appendChild(badge);
             }
-        } catch (error) {
-            console.error(`Error updating tab count for ${tableId}:`, error);
         }
     }
     
@@ -326,6 +329,7 @@ const TabbedInventory = (function() {
      * Check if a record has incomplete fields
      */
     function isIncompleteRecord(item) {
+        // Define required fields
         const requiredFields = [
             'Order', 'Family', 'Genus', 'Species', 'Common Name', 
             'Location', 'Country', 'How collected', 'Date collected'
@@ -337,10 +341,11 @@ const TabbedInventory = (function() {
     }
     
     /**
-     * Load data for all tabs
+     * Load data for all tabs (called when data changes)
      */
     function refreshAllTabs() {
         try {
+            console.log('Refreshing all taxonomy tabs');
             // Get all tab content containers
             const tabPanes = document.querySelectorAll('#taxonomyTabContent .tab-pane');
             
@@ -351,52 +356,10 @@ const TabbedInventory = (function() {
                     loadTabData(table.id);
                 }
             });
+            
+            console.log('All taxonomy tabs refreshed');
         } catch (error) {
             console.error('Error refreshing taxonomy tabs:', error);
-        }
-    }
-    
-    /**
-     * Calculate and update counts for all tabs
-     */
-    function calculateAllTabCounts() {
-        try {
-            const allData = Database.getAllData();
-            
-            // Update count for "All" tab
-            updateTabCount('all-inventory-table', allData.length);
-            
-            // Update counts for each taxonomic group
-            Object.keys(taxonomicGroups).forEach(group => {
-                const groupId = group.toLowerCase().replace(/\W+/g, '-');
-                const tableId = `${groupId}-inventory-table`;
-                
-                const orders = taxonomicGroups[group];
-                let count = 0;
-                
-                if (orders.length > 0) {
-                    // Count items in this group
-                    count = allData.filter(item => orders.includes(item.Order)).length;
-                } else {
-                    // For "Other/Unclassified"
-                    const allDefinedOrders = [];
-                    Object.keys(taxonomicGroups).forEach(key => {
-                        if (key !== 'Other/Unclassified') {
-                            taxonomicGroups[key].forEach(order => {
-                                if (order) allDefinedOrders.push(order);
-                            });
-                        }
-                    });
-                    
-                    count = allData.filter(item => 
-                        item.Order && !allDefinedOrders.includes(item.Order)
-                    ).length;
-                }
-                
-                updateTabCount(tableId, count);
-            });
-        } catch (error) {
-            console.error('Error calculating tab counts:', error);
         }
     }
     
@@ -404,7 +367,6 @@ const TabbedInventory = (function() {
     return {
         init,
         refreshAllTabs,
-        loadTabData,
-        calculateAllTabCounts
+        loadTabData
     };
 })();
