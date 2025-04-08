@@ -444,4 +444,25 @@ const TabbedInventory = (function() {
         loadTabData,
         calculateAllTabCounts
     };
+    // Make sure incomplete records load when needed
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit to ensure everything is loaded
+    setTimeout(function() {
+        // If we're on the incomplete records page, load them
+        if (!document.getElementById('incomplete').classList.contains('d-none')) {
+            if (typeof IncompleteRecords !== 'undefined' && 
+                typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                console.log('Explicitly loading incomplete records...');
+                IncompleteRecords.loadIncompleteRecords();
+            }
+        }
+        
+        // Update inventory tab counts
+        if (typeof TabbedInventory !== 'undefined' && 
+            typeof TabbedInventory.calculateAllTabCounts === 'function') {
+            console.log('Calculating tab counts...');
+            TabbedInventory.calculateAllTabCounts();
+        }
+    }, 1000);
+});
 })();
