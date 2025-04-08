@@ -1,5 +1,5 @@
 /**
- * ZOARCH Lab Inventory - Database Management with GitHub Integration
+ * ZOARCH Lab Inventory - Database Management with GitHub Integration (Fixed)
  */
 
 // Database namespace
@@ -18,18 +18,42 @@ const Database = (function() {
     function init(config = {}) {
         return new Promise(async (resolve, reject) => {
             try {
-                // Set the storage mode
-                if (config.useGitHub === true) {
+                console.log('Initializing database...');
+                
+                // Check if GitHub is enabled in localStorage
+                const useGitHub = localStorage.getItem('zoarch_use_github') === 'true';
+                
+                // Set the storage mode from config or localStorage
+                if (config.useGitHub === true || useGitHub) {
                     storageMode = 'github';
+                    console.log('GitHub storage mode is enabled');
+                } else {
+                    console.log('Using local storage mode');
                 }
                 
                 // Try to initialize GitHub storage if requested
                 if (storageMode === 'github' && typeof GitHubStorage !== 'undefined') {
-                    const gitHubInitialized = await GitHubStorage.init(config.github || {});
+                    console.log('Attempting to initialize GitHub storage...');
+                    
+                    // Try to load GitHub configuration from localStorage
+                    const githubConfig = {
+                        owner: localStorage.getItem('zoarch_github_owner'),
+                        repo: localStorage.getItem('zoarch_github_repo'),
+                        branch: localStorage.getItem('zoarch_github_branch') || 'main',
+                        path: localStorage.getItem('zoarch_github_path') || 'data/inventory.json',
+                        token: sessionStorage.getItem('zoarch_github_token')
+                    };
+                    
+                    // Combine with any config provided directly
+                    const combinedConfig = { ...githubConfig, ...(config.github || {}) };
+                    
+                    // Initialize GitHub storage
+                    const gitHubInitialized = await GitHubStorage.init(combinedConfig);
                     
                     // If GitHub is initialized and has a token, load data from there
                     if (gitHubInitialized && GitHubStorage.hasToken()) {
                         try {
+                            console.log('Loading data from GitHub...');
                             const gitHubData = await GitHubStorage.getInventoryData();
                             inventoryData = gitHubData;
                             console.log('Data loaded from GitHub:', inventoryData.length, 'records');
@@ -50,6 +74,7 @@ const Database = (function() {
                 }
                 
                 // If we're here, use local storage
+                console.log('Attempting to load data from local storage...');
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 
                 if (savedData) {
@@ -63,6 +88,7 @@ const Database = (function() {
                     }
                 } else {
                     // If no data in localStorage, load demo data
+                    console.log('No data in localStorage, loading demo data...');
                     loadDemoData().then(resolve).catch(reject);
                 }
             } catch (error) {
@@ -116,6 +142,7 @@ const Database = (function() {
         
         // If using GitHub, save there too
         if (storageMode === 'github' && typeof GitHubStorage !== 'undefined' && GitHubStorage.hasToken()) {
+            console.log('Saving data to GitHub...');
             GitHubStorage.saveInventoryData(inventoryData)
                 .then(() => {
                     console.log('Data saved to GitHub successfully');
@@ -170,6 +197,15 @@ const Database = (function() {
         }
         
         storageMode = mode;
+        console.log(`Storage mode set to: ${mode}`);
+        
+        // Update localStorage to persist the setting
+        if (mode === 'github') {
+            localStorage.setItem('zoarch_use_github', 'true');
+        } else {
+            localStorage.setItem('zoarch_use_github', 'false');
+        }
+        
         return true;
     }
     
@@ -187,6 +223,7 @@ const Database = (function() {
     function importFromFile(file, append = false) {
         return new Promise((resolve, reject) => {
             try {
+                console.log(`Importing data from file: ${file.name} (append: ${append})`);
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
@@ -196,6 +233,7 @@ const Database = (function() {
                         
                         if (file.name.endsWith('.csv')) {
                             // Parse CSV
+                            console.log('Parsing CSV file...');
                             const rows = data.split('\n');
                             const headers = rows[0].split(',').map(header => header.trim());
                             
@@ -213,15 +251,20 @@ const Database = (function() {
                             }
                         } else {
                             // Parse Excel using SheetJS
+                            console.log('Parsing Excel file...');
                             const workbook = XLSX.read(data, { type: 'binary' });
                             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                             importedData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
                         }
                         
+                        console.log(`Imported ${importedData.length} records from file`);
+                        
                         if (append) {
                             inventoryData = [...inventoryData, ...importedData];
+                            console.log(`Appended data, new total: ${inventoryData.length} records`);
                         } else {
                             inventoryData = importedData;
+                            console.log(`Replaced data, new total: ${inventoryData.length} records`);
                         }
                         
                         saveData();
