@@ -465,4 +465,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
 });
+    document.addEventListener('DOMContentLoaded', function() {
+    // Check if we need to load the incomplete records
+    setTimeout(function() {
+        const incompleteSection = document.getElementById('incomplete');
+        if (incompleteSection && !incompleteSection.classList.contains('d-none') && 
+            typeof IncompleteRecords !== 'undefined' && 
+            typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+            console.log('Explicitly loading incomplete records...');
+            IncompleteRecords.loadIncompleteRecords();
+        }
+    }, 1000); // Delay to ensure everything is loaded
+});
 })();
