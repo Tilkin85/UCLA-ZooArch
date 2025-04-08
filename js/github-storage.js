@@ -1,5 +1,5 @@
 /**
- * ZOARCH Lab Inventory - GitHub Storage Module (Fixed)
+ * ZOARCH Lab Inventory - GitHub Storage Module
  * This module handles synchronizing data with a GitHub repository
  */
 
