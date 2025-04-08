@@ -1,480 +1,838 @@
 /**
- * ZOARCH Lab Inventory - Simplified Tabbed Inventory Display (Fixed)
- * With proper category counting and display
+ * ZOARCH Lab Inventory - Main Application (Enhanced)
  */
 
-// TabbedInventory namespace
-const TabbedInventory = (function() {
-    // Configuration - taxonomic groups and their orders
-    const taxonomicGroups = {
-        'Mammals': ['Artiodactyla', 'Carnivora', 'Cetacea', 'Chiroptera', 'Primates', 'Rodentia', 'Lagomorpha', 'Proboscidea'],
-        'Fish/Marine Life': ['Carcharhiniformes', 'Perciformes', 'Tetraodontiformes', 'Siluriformes', 'Cypriniformes', 'Salmoniformes'],
-        'Birds': ['Passeriformes', 'Falconiformes', 'Strigiformes', 'Anseriformes', 'Psittaciformes', 'Columbiformes'],
-        'Reptiles/Amphibians': ['Squamata', 'Testudines', 'Crocodilia', 'Anura', 'Caudata'],
-        'Invertebrates': ['Araneae', 'Coleoptera', 'Lepidoptera', 'Hymenoptera', 'Diptera', 'Decapoda', 'Gastropoda'],
-        'Other/Unclassified': [] // This will catch anything not in the above groups
-    };
+// Wait for the DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the application
+    initApp().then(() => {
+        // After everything is loaded, modify the save function
+        modifyIncompleteRecordsSaveFunction();
+    }).catch(error => {
+        console.error("Error during initialization:", error);
+    });
+});
+
+/**
+ * Initialize the application
+ */
+async function initApp() {
+    // Show loading indicator
+    console.log('Loading...');
     
-    /**
-     * Initialize the tabbed inventory display
-     */
-    function init() {
-        console.log('Initializing simplified tabbed inventory...');
-        try {
-            // Get inventory section
-            const inventorySection = document.getElementById('inventory');
-            if (!inventorySection) {
-                console.error('Inventory section not found');
-                return false;
-            }
-            
-            // Create the tabbed content div
-            const tabbedContent = document.createElement('div');
-            tabbedContent.className = 'taxonomy-tabs mt-4';
-            tabbedContent.innerHTML = createTabHTML();
-            
-            // Find a good place to insert it
-            const contentDiv = inventorySection.querySelector('.col-12');
-            if (!contentDiv) {
-                // If no .col-12, just append to the section itself
-                inventorySection.appendChild(tabbedContent);
-            } else {
-                // Clear the content div except for the h2 and p elements
-                const header = contentDiv.querySelector('h2');
-                const paragraph = contentDiv.querySelector('p');
-                
-                contentDiv.innerHTML = '';
-                
-                // Add back the header and paragraph if they existed
-                if (header) contentDiv.appendChild(header);
-                if (paragraph) contentDiv.appendChild(paragraph);
-                
-                // Add the tabbed content
-                contentDiv.appendChild(tabbedContent);
-            }
-            
-            // Add event listeners for tab changes
-            setupTabEventListeners();
-            
-            // Load data for the initial active tab
-            const activeTab = document.querySelector('#taxonomyTabContent .tab-pane.active table');
-            if (activeTab) {
-                loadTabData(activeTab.id);
-            }
-            
-            console.log('Simplified tabbed inventory initialized successfully');
-            return true;
-        } catch (error) {
-            console.error('Error initializing simplified tabbed inventory:', error);
-            return false;
+    try {
+        // Make sure required modules are defined
+        if (typeof Database === 'undefined') {
+            throw new Error('Database module not loaded properly');
         }
+        
+        // Check for GitHub configuration
+        const useGitHub = localStorage.getItem('zoarch_use_github') === 'true';
+        const config = {
+            useGitHub: useGitHub,
+            github: {}
+        };
+        
+        // Initialize the database
+        await Database.init(config);
+        
+        // Setup UI elements
+        setupNavigation();
+        setupEventListeners();
+        
+        // Load and display initial data
+        loadDashboardData();
+        
+        // Initialize the tabbed inventory display (if available)
+        try {
+            if (typeof TabbedInventory !== 'undefined' && 
+                TabbedInventory && 
+                typeof TabbedInventory.init === 'function') {
+                const tabInit = TabbedInventory.init();
+                if (tabInit) {
+                    console.log('Tabbed inventory initialized');
+                    // Load data for the active tab
+                    const activeTab = document.querySelector('#taxonomyTabContent .tab-pane.active table');
+                    if (activeTab) {
+                        TabbedInventory.loadTabData(activeTab.id);
+                    }
+                } else {
+                    // Fall back to normal inventory loading
+                    loadInventoryTable();
+                }
+            } else {
+                // Fall back to normal inventory loading
+                loadInventoryTable();
+            }
+        } catch (tabError) {
+            console.warn("Error initializing tabbed inventory, falling back to standard view:", tabError);
+            loadInventoryTable();
+        }
+        
+        // Initialize incomplete records if available
+        try {
+            if (typeof IncompleteRecords !== 'undefined' && 
+                IncompleteRecords && 
+                typeof IncompleteRecords.init === 'function') {
+                IncompleteRecords.init();
+            }
+        } catch (incompleteError) {
+            console.warn("Error initializing incomplete records:", incompleteError);
+        }
+        
+        // Initialize tabbed incomplete records if available
+        try {
+            if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                TabbedIncompleteRecords && 
+                typeof TabbedIncompleteRecords.init === 'function') {
+                const tabInit = TabbedIncompleteRecords.init();
+                if (tabInit) {
+                    console.log('Tabbed incomplete records initialized');
+                    // Load data for the active tab
+                    const activeTab = document.querySelector('#incompleteTaxonomyTabContent .tab-pane.active table');
+                    if (activeTab) {
+                        TabbedIncompleteRecords.loadTabData(activeTab.id);
+                    }
+                } else {
+                    // Fall back to normal loading
+                    if (typeof IncompleteRecords !== 'undefined' && 
+                        IncompleteRecords && 
+                        typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                        IncompleteRecords.loadIncompleteRecords();
+                    }
+                }
+            } else {
+                // Fall back to normal loading
+                if (typeof IncompleteRecords !== 'undefined' && 
+                    IncompleteRecords && 
+                    typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                    IncompleteRecords.loadIncompleteRecords();
+                }
+            }
+        } catch (tabIncompleteError) {
+            console.warn("Error initializing tabbed incomplete records, falling back to standard view:", tabIncompleteError);
+            if (typeof IncompleteRecords !== 'undefined' && 
+                IncompleteRecords && 
+                typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                IncompleteRecords.loadIncompleteRecords();
+            }
+        }
+        
+        // Initialize charts if available
+        try {
+            if (typeof Charts !== 'undefined' && Charts && typeof Charts.initCharts === 'function') {
+                Charts.initCharts(Database.getChartData());
+            } else {
+                console.warn("Charts module not available, skipping chart initialization");
+            }
+        } catch (chartError) {
+            console.warn("Error initializing charts, continuing without visualizations:", chartError);
+        }
+        
+        console.log('Loading complete');
+    } catch (error) {
+        console.error('Error initializing app:', error);
+        alert('There was an error initializing the application. Please check the console for details.');
+        console.log('Loading complete');
     }
-    
-    /**
-     * Create the HTML for the tabbed interface
-     */
-    function createTabHTML() {
-        // Start with the tabs
-        let html = '<ul class="nav nav-tabs" id="taxonomyTabs" role="tablist">';
+}
+
+/**
+ * Setup navigation between sections
+ */
+function setupNavigation() {
+    try {
+        // Get navigation elements
+        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+        const contentSections = document.querySelectorAll('.content-section');
         
-        // Add the "All" tab
-        html += `
-            <li class="nav-item" role="presentation">
-                <a class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-content" 
-                    role="tab" aria-controls="all-content" aria-selected="true">All</a>
-            </li>
-        `;
-        
-        // Add tabs for each taxonomic group
-        Object.keys(taxonomicGroups).forEach(group => {
-            const groupId = group.toLowerCase().replace(/\W+/g, '-');
-            html += `
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link" id="${groupId}-tab" data-bs-toggle="tab" data-bs-target="#${groupId}-content" 
-                        role="tab" aria-controls="${groupId}-content" aria-selected="false">${group}</a>
-                </li>
-            `;
-        });
-        
-        // Close the tabs
-        html += '</ul>';
-        
-        // Start the tab content
-        html += '<div class="tab-content border border-top-0 rounded-bottom p-3" id="taxonomyTabContent">';
-        
-        // Add the "All" tab content
-        html += `
-            <div class="tab-pane fade show active" id="all-content" role="tabpanel" aria-labelledby="all-tab">
-                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table id="all-inventory-table" class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>Owner</th>
-                                <th>Catalog #</th>
-                                <th>Order</th>
-                                <th>Family</th>
-                                <th>Genus</th>
-                                <th>Species</th>
-                                <th>Common Name</th>
-                                <th>Location</th>
-                                <th>Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="9" class="text-center">Loading items...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-        
-        // Add content for each taxonomic group
-        Object.keys(taxonomicGroups).forEach(group => {
-            const groupId = group.toLowerCase().replace(/\W+/g, '-');
-            html += `
-                <div class="tab-pane fade" id="${groupId}-content" role="tabpanel" aria-labelledby="${groupId}-tab">
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table id="${groupId}-inventory-table" class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Owner</th>
-                                    <th>Catalog #</th>
-                                    <th>Order</th>
-                                    <th>Family</th>
-                                    <th>Genus</th>
-                                    <th>Species</th>
-                                    <th>Common Name</th>
-                                    <th>Location</th>
-                                    <th>Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td colspan="9" class="text-center">Loading items...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Close the tab content
-        html += '</div>';
-        
-        return html;
-    }
-    
-    /**
-     * Setup event listeners for tab changes
-     */
-    function setupTabEventListeners() {
-        // Get all tab buttons
-        const tabButtons = document.querySelectorAll('#taxonomyTabs .nav-link');
-        
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                // Prevent default action
+        // Add click event to each nav link
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
                 e.preventDefault();
                 
-                // Get target tab
-                const target = this.getAttribute('data-bs-target');
+                // Remove active class from all links
+                navLinks.forEach(navLink => navLink.classList.remove('active'));
                 
-                // Remove active class from all tabs and panes
-                document.querySelectorAll('#taxonomyTabs .nav-link').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                document.querySelectorAll('#taxonomyTabContent .tab-pane').forEach(pane => {
-                    pane.classList.remove('show', 'active');
-                });
-                
-                // Add active class to clicked tab and corresponding pane
+                // Add active class to clicked link
                 this.classList.add('active');
-                const pane = document.querySelector(target);
-                if (pane) {
-                    pane.classList.add('show', 'active');
+                
+                // Hide all content sections
+                contentSections.forEach(section => section.classList.add('d-none'));
+                
+                // Show the corresponding section
+                const sectionId = this.id.replace('-link', '');
+                const section = document.getElementById(sectionId);
+                if (section) {
+                    section.classList.remove('d-none');
                     
-                    // Load data for this tab if needed
-                    const tableId = pane.querySelector('table')?.id;
-                    if (tableId) {
-                        loadTabData(tableId);
+                    // Special handling for inventory tab
+                    if (sectionId === 'inventory' && 
+                        typeof TabbedInventory !== 'undefined' && 
+                        typeof TabbedInventory.refreshAllTabs === 'function') {
+                        // Refresh tabs in case data has changed
+                        TabbedInventory.refreshAllTabs();
+                    }
+                    
+                    // Special handling for incomplete tab
+                    if (sectionId === 'incomplete') {
+                        if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                            typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
+                            // Use tabbed interface if available
+                            TabbedIncompleteRecords.refreshAllTabs();
+                        } else if (typeof IncompleteRecords !== 'undefined' && 
+                                  typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                            // Fall back to original interface
+                            IncompleteRecords.loadIncompleteRecords();
+                        }
                     }
                 }
             });
         });
+    } catch (error) {
+        console.error('Error setting up navigation:', error);
     }
-    
-    /**
-     * Load inventory data for a specific tab
-     */
-    function loadTabData(tableId) {
-        try {
-            console.log(`Loading data for tab: ${tableId}`);
-            const table = document.getElementById(tableId);
-            if (!table) {
-                console.error(`Table element not found: ${tableId}`);
-                return;
-            }
+}
+
+/**
+ * Setup event listeners for various UI interactions
+ */
+function setupEventListeners() {
+    try {
+        // Import form submission
+        const importForm = document.getElementById('import-form');
+        if (importForm) {
+            importForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('import-file');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    alert('Please select a file to import.');
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                const append = confirm('Do you want to append this data to the existing inventory? Click "OK" to append or "Cancel" to replace all data.');
+                
+                console.log('Loading...');
+                
+                Database.importFromFile(file, append)
+                    .then(data => {
+                        alert(`Successfully imported ${data.length} records.`);
+                        
+                        // Reload data and update UI
+                        loadDashboardData();
+                        
+                        // Update tabbed inventory if available
+                        if (typeof TabbedInventory !== 'undefined' && 
+                            typeof TabbedInventory.refreshAllTabs === 'function') {
+                            TabbedInventory.refreshAllTabs();
+                        } else {
+                            loadInventoryTable();
+                        }
+                        
+                        // Update incomplete records if available
+                        if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                            typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
+                            TabbedIncompleteRecords.refreshAllTabs();
+                        } else if (typeof IncompleteRecords !== 'undefined' && 
+                                  typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                            IncompleteRecords.loadIncompleteRecords();
+                        }
+                        
+                        // Update charts if available
+                        try {
+                            if (typeof Charts !== 'undefined' && Charts && typeof Charts.updateCharts === 'function') {
+                                Charts.updateCharts(Database.getChartData());
+                            }
+                        } catch (chartError) {
+                            console.warn("Error updating charts, but data was imported successfully:", chartError);
+                        }
+                        
+                        // Reset form
+                        importForm.reset();
+                        
+                        console.log('Loading complete');
+                    })
+                    .catch(error => {
+                        alert(`Error importing data: ${error.message}`);
+                        console.log('Loading complete');
+                    });
+            });
+        }
+        
+        // Add entry form
+        const addEntryForm = document.getElementById('add-entry-form');
+        if (addEntryForm) {
+            addEntryForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Collect form data
+                const newEntry = {
+                    'Owner': document.getElementById('entry-owner').value,
+                    'Catalog #': document.getElementById('entry-catalog').value,
+                    '# of specimens': document.getElementById('entry-specimens').value,
+                    'Order': document.getElementById('entry-order').value,
+                    'Family': document.getElementById('entry-family').value,
+                    'Genus': document.getElementById('entry-genus').value,
+                    'Species': document.getElementById('entry-species').value,
+                    'Common Name': document.getElementById('entry-common').value,
+                    'Location': document.getElementById('entry-location').value,
+                    'Country': document.getElementById('entry-country').value,
+                    'How collected': document.getElementById('entry-collected').value,
+                    'Date collected': document.getElementById('entry-date').value,
+                    'Notes': document.getElementById('entry-notes').value
+                };
+                
+                // Validate required fields
+                if (!newEntry['Catalog #']) {
+                    alert('Catalog # is required.');
+                    return;
+                }
+                
+                // Add the new entry
+                if (Database.addItem(newEntry)) {
+                    alert('Entry added successfully.');
+                    
+                    // Reload data and update UI
+                    loadDashboardData();
+                    
+                    // Update tabbed inventory if available
+                    if (typeof TabbedInventory !== 'undefined' && 
+                        typeof TabbedInventory.refreshAllTabs === 'function') {
+                        TabbedInventory.refreshAllTabs();
+                    } else {
+                        loadInventoryTable();
+                    }
+                    
+                    // Update incomplete records if available
+                    if (typeof TabbedIncompleteRecords !== 'undefined' && 
+                        typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
+                        TabbedIncompleteRecords.refreshAllTabs();
+                    } else if (typeof IncompleteRecords !== 'undefined' && 
+                              typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+                        IncompleteRecords.loadIncompleteRecords();
+                    }
+                    
+                    // Reset form
+                    addEntryForm.reset();
+                } else {
+                    alert('Failed to add entry. An item with this Catalog # may already exist.');
+                }
+            });
+        }
+        
+        // Add export buttons
+        setupExportButtons();
+        
+        // Setup GitHub status indicator
+        setupGitHubStatus();
+    } catch (error) {
+        console.error('Error setting up event listeners:', error);
+    }
+}
+
+/**
+ * Setup export buttons
+ */
+function setupExportButtons() {
+    try {
+        // Create export buttons container if they don't already exist
+        if (!document.getElementById('export-excel-btn')) {
+            const exportContainer = document.createElement('div');
+            exportContainer.className = 'row mt-3';
+            exportContainer.innerHTML = `
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Export Data</h5>
+                            <p>Download your inventory data in Excel or CSV format.</p>
+                            <div class="d-flex gap-2">
+                                <button id="export-excel-btn" class="btn btn-primary">
+                                    <i class="fas fa-file-excel"></i> Export to Excel
+                                </button>
+                                <button id="export-csv-btn" class="btn btn-secondary">
+                                    <i class="fas fa-file-csv"></i> Export to CSV
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            const tableBody = table.querySelector('tbody');
-            if (!tableBody) {
-                console.error(`Table body not found for: ${tableId}`);
-                return;
+            // Find update section to append the buttons
+            const updateSection = document.getElementById('update');
+            if (updateSection) {
+                // Find a good place to insert it (after the import section)
+                const importSection = updateSection.querySelector('.row').nextElementSibling;
+                if (importSection) {
+                    updateSection.insertBefore(exportContainer, importSection);
+                }
             }
+        }
+        
+        // Add event listeners for export buttons
+        const excelBtn = document.getElementById('export-excel-btn');
+        if (excelBtn) {
+            excelBtn.addEventListener('click', exportToExcel);
+        }
+        
+        const csvBtn = document.getElementById('export-csv-btn');
+        if (csvBtn) {
+            csvBtn.addEventListener('click', exportToCSV);
+        }
+    } catch (error) {
+        console.error('Error setting up export buttons:', error);
+    }
+}
+
+/**
+ * Export inventory to Excel
+ */
+function exportToExcel() {
+    try {
+        // Get all data
+        const data = Database.getAllData();
+        
+        if (data.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+        
+        // Convert to worksheet
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+        
+        // Generate a filename with date
+        const date = new Date().toISOString().slice(0, 10);
+        const filename = `zoarch_inventory_${date}.xlsx`;
+        
+        // Export the file
+        XLSX.writeFile(workbook, filename);
+    } catch (error) {
+        console.error('Error exporting to Excel:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+/**
+ * Export inventory to CSV
+ */
+function exportToCSV() {
+    try {
+        // Get all data
+        const data = Database.getAllData();
+        
+        if (data.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+        
+        // Convert to worksheet then to CSV
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const csv = XLSX.utils.sheet_to_csv(worksheet);
+        
+        // Create a blob and download link
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        // Generate a filename with date
+        const date = new Date().toISOString().slice(0, 10);
+        const filename = `zoarch_inventory_${date}.csv`;
+        
+        // Create and trigger download link
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Error exporting to CSV:', error);
+        alert('Error exporting to CSV: ' + error.message);
+    }
+}
+
+/**
+ * Setup GitHub status indicator
+ */
+function setupGitHubStatus() {
+    try {
+        // Create status indicator if it doesn't exist
+        if (!document.getElementById('github-status')) {
+            const statusIndicator = document.createElement('div');
+            statusIndicator.id = 'github-status';
+            statusIndicator.className = 'position-fixed bottom-0 end-0 m-3';
             
-            // Clear existing table content
+            // Add to document
+            document.body.appendChild(statusIndicator);
+        }
+        
+        // Update status based on storage mode
+        updateGitHubStatus();
+    } catch (error) {
+        console.error('Error setting up GitHub status:', error);
+    }
+}
+
+/**
+ * Update GitHub status indicator
+ */
+function updateGitHubStatus() {
+    try {
+        const indicator = document.getElementById('github-status');
+        if (!indicator) return;
+        
+        // Check if using GitHub
+        const usingGitHub = Database.getStorageMode() === 'github';
+        
+        if (usingGitHub) {
+            indicator.innerHTML = `
+                <div class="badge bg-primary">
+                    <i class="fab fa-github"></i> GitHub Sync Enabled
+                </div>
+            `;
+        } else {
+            indicator.innerHTML = `
+                <div class="badge bg-secondary">
+                    <i class="fas fa-database"></i> Local Storage
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error updating GitHub status:', error);
+    }
+}
+
+/**
+ * Load and display dashboard data
+ */
+function loadDashboardData() {
+    try {
+        // Get summary statistics
+        const stats = Database.getSummaryStats();
+        
+        // Update dashboard cards
+        const totalSpecimens = document.getElementById('total-specimens');
+        const totalSpecies = document.getElementById('total-species');
+        const totalFamilies = document.getElementById('total-families');
+        
+        if (totalSpecimens) totalSpecimens.textContent = stats.totalSpecimens.toLocaleString();
+        if (totalSpecies) totalSpecies.textContent = stats.uniqueSpecies.toLocaleString();
+        if (totalFamilies) totalFamilies.textContent = stats.uniqueFamilies.toLocaleString();
+        
+        // Add Incomplete Items card if it doesn't exist
+        addIncompleteCard(stats.incompleteItems);
+        
+        // Load recent inventory items
+        const recentItems = Database.getAllData().slice(-5);
+        const tableBody = document.getElementById('recent-inventory-body');
+        
+        if (tableBody) {
             tableBody.innerHTML = '';
             
-            // Get all data
-            const allData = Database.getAllData();
-            console.log(`Retrieved ${allData.length} records from database`);
-            
-            // Filter data based on tab ID
-            let filteredData = allData;
-            
-            // If not the "all" tab, filter by taxonomic group
-            if (tableId !== 'all-inventory-table') {
-                // Extract group name from the table ID
-                const groupName = tableId.replace('-inventory-table', '');
-                
-                // Find the matching taxonomic group
-                const groupKey = Object.keys(taxonomicGroups).find(key => 
-                    key.toLowerCase().replace(/\W+/g, '-') === groupName
-                );
-                
-                if (groupKey) {
-                    const orders = taxonomicGroups[groupKey];
-                    
-                    if (orders.length > 0) {
-                        // Filter by specific orders in this group
-                        filteredData = allData.filter(item => orders.includes(item.Order));
-                    } else {
-                        // For "Other/Unclassified", include items not in any defined group
-                        const allDefinedOrders = [];
-                        Object.keys(taxonomicGroups).forEach(key => {
-                            if (key !== 'Other/Unclassified') {
-                                taxonomicGroups[key].forEach(order => allDefinedOrders.push(order));
-                            }
-                        });
-                        
-                        filteredData = allData.filter(item => 
-                            item.Order && !allDefinedOrders.includes(item.Order)
-                        );
-                    }
-                }
-            }
-            
-            console.log(`Filtered to ${filteredData.length} records for ${tableId}`);
-            
-            // Add count to the tab
-            updateTabCount(tableId, filteredData.length);
-            
-            // If no data, show a message
-            if (filteredData.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="9" class="text-center">No items found in this category</td></tr>';
-                return;
-            }
-            
-            // Add rows to the table
-            filteredData.forEach(item => {
+            recentItems.forEach(item => {
                 const row = document.createElement('tr');
                 
-                // Highlight incomplete rows
-                if (isIncompleteRecord(item)) {
-                    row.classList.add('table-warning');
-                }
-                
                 row.innerHTML = `
-                    <td>${item['Owner'] || ''}</td>
                     <td>${item['Catalog #'] || ''}</td>
                     <td>${item['Order'] || ''}</td>
                     <td>${item['Family'] || ''}</td>
                     <td>${item['Genus'] || ''}</td>
                     <td>${item['Species'] || ''}</td>
                     <td>${item['Common Name'] || ''}</td>
-                    <td>${item['Location'] || ''}</td>
-                    <td>
-                        <button class="btn btn-sm btn-info view-details-btn" data-catalog="${item['Catalog #']}">
-                            <i class="fas fa-search"></i> Details
-                        </button>
-                    </td>
                 `;
                 
                 tableBody.appendChild(row);
             });
-            
-            // Add click handlers for details buttons
-            const detailsButtons = tableBody.querySelectorAll('.view-details-btn');
-            detailsButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const catalogNum = this.getAttribute('data-catalog');
-                    if (typeof window.showItemDetails === 'function') {
-                        window.showItemDetails(catalogNum);
-                    } else {
-                        console.warn('showItemDetails function not found in global scope');
-                        alert(`Details for catalog #${catalogNum}`);
-                    }
-                });
-            });
-            
-            console.log(`Tab ${tableId} data loaded successfully`);
-        } catch (error) {
-            console.error(`Error loading data for tab ${tableId}:`, error);
-            const table = document.getElementById(tableId);
-            if (table) {
-                const tableBody = table.querySelector('tbody');
-                if (tableBody) {
-                    tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error loading data: ${error.message}</td></tr>`;
-                }
-            }
         }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
     }
-    
-    /**
-     * Update the count badge on a tab
-     */
-    function updateTabCount(tableId, count) {
-        try {
-            const tabId = tableId.replace('-inventory-table', '-tab');
-            const tab = document.getElementById(tabId);
-            
-            if (tab) {
-                // Remove existing badge if any
-                const existingBadge = tab.querySelector('.badge');
-                if (existingBadge) {
-                    existingBadge.remove();
-                }
-                
-                // Add new badge with count
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-secondary ms-2';
-                badge.textContent = count;
-                tab.appendChild(badge);
-                
-                console.log(`Updated tab count for ${tabId}: ${count}`);
-            }
-        } catch (error) {
-            console.error(`Error updating tab count for ${tableId}:`, error);
-        }
-    }
-    
-    /**
-     * Check if a record has incomplete fields
-     */
-    function isIncompleteRecord(item) {
-        // Define required fields
-        const requiredFields = [
-            'Order', 'Family', 'Genus', 'Species', 'Common Name', 
-            'Location', 'Country', 'How collected', 'Date collected'
-        ];
+}
+
+/**
+ * Add incomplete items card to dashboard
+ */
+function addIncompleteCard(incompleteCount) {
+    try {
+        // Check if card already exists
+        if (document.getElementById('incomplete-items-card')) return;
         
-        return requiredFields.some(field => 
-            !item[field] || item[field].toString().trim() === ''
-        );
-    }
-    
-    /**
-     * Load data for all tabs (called when data changes)
-     */
-    function refreshAllTabs() {
-        try {
-            console.log('Refreshing all taxonomy tabs');
-            // Get all tab content containers
-            const tabPanes = document.querySelectorAll('#taxonomyTabContent .tab-pane');
-            
-            // For each pane, reload the table data
-            tabPanes.forEach(pane => {
-                const table = pane.querySelector('table');
-                if (table) {
-                    loadTabData(table.id);
+        // Find the dashboard cards row
+        const dashboardRow = document.querySelector('#dashboard .row:nth-child(2)');
+        if (!dashboardRow) return;
+        
+        // Create the card
+        const cardColumn = document.createElement('div');
+        cardColumn.className = 'col-md-4 mb-3';
+        cardColumn.id = 'incomplete-items-card';
+        
+        cardColumn.innerHTML = `
+            <div class="card ${incompleteCount > 0 ? 'border-warning' : 'border-success'}">
+                <div class="card-body">
+                    <h5 class="card-title">Incomplete Records</h5>
+                    <p class="card-text display-4 ${incompleteCount > 0 ? 'text-warning' : 'text-success'}" id="incomplete-count">${incompleteCount}</p>
+                    ${incompleteCount > 0 ? `<a href="#" id="view-incomplete-link" class="btn btn-warning btn-sm">View & Edit</a>` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Add to dashboard
+        dashboardRow.appendChild(cardColumn);
+        
+        // Add click handler for the "View & Edit" link
+        const viewLink = document.getElementById('view-incomplete-link');
+        if (viewLink) {
+            viewLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Trigger click on the incomplete tab
+                const incompleteLink = document.getElementById('incomplete-link');
+                if (incompleteLink) {
+                    incompleteLink.click();
                 }
             });
-            
-            console.log('All taxonomy tabs refreshed');
-        } catch (error) {
-            console.error('Error refreshing taxonomy tabs:', error);
         }
+    } catch (error) {
+        console.error('Error adding incomplete items card:', error);
     }
-    
-    // Helper function to calculate and pre-populate tab counts
-    function calculateAllTabCounts() {
-        try {
-            console.log('Pre-calculating all tab counts...');
-            const allData = Database.getAllData();
+}
+
+/**
+ * Load and initialize the inventory table
+ */
+function loadInventoryTable() {
+    try {
+        const tableElement = document.getElementById('inventory-table');
+        if (!tableElement) return;
+        
+        // Get all data
+        const data = Database.getAllData();
+        
+        // Clear existing table
+        const tableBody = tableElement.querySelector('tbody');
+        if (!tableBody) return;
+        
+        tableBody.innerHTML = '';
+        
+        // Populate table
+        data.forEach(item => {
+            const row = document.createElement('tr');
             
-            // Calculate count for "All" tab
-            updateTabCount('all-inventory-table', allData.length);
+            // Highlight incomplete rows
+            if (isIncompleteRecord(item)) {
+                row.classList.add('table-warning');
+            }
             
-            // Calculate counts for each taxonomic group
-            Object.keys(taxonomicGroups).forEach(group => {
-                const groupId = group.toLowerCase().replace(/\W+/g, '-');
-                const tableId = `${groupId}-inventory-table`;
-                
-                const orders = taxonomicGroups[group];
-                let count = 0;
-                
-                if (orders.length > 0) {
-                    // Count items in this group
-                    count = allData.filter(item => orders.includes(item.Order)).length;
-                } else {
-                    // For "Other/Unclassified", count items not in any defined group
-                    const allDefinedOrders = [];
-                    Object.keys(taxonomicGroups).forEach(key => {
-                        if (key !== 'Other/Unclassified') {
-                            taxonomicGroups[key].forEach(order => allDefinedOrders.push(order));
-                        }
-                    });
+            row.innerHTML = `
+                <td>${item['Owner'] || ''}</td>
+                <td>${item['Catalog #'] || ''}</td>
+                <td>${item['Order'] || ''}</td>
+                <td>${item['Family'] || ''}</td>
+                <td>${item['Genus'] || ''}</td>
+                <td>${item['Species'] || ''}</td>
+                <td>${item['Common Name'] || ''}</td>
+                <td>${item['Location'] || ''}</td>
+                <td>
+                    <button class="btn btn-sm btn-info view-details-btn" data-catalog="${item['Catalog #']}">
+                        <i class="fas fa-search"></i> Details
+                    </button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+        
+        // Add click handlers for details buttons
+        const detailsButtons = document.querySelectorAll('.view-details-btn');
+        detailsButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const catalogNum = this.getAttribute('data-catalog');
+                showItemDetails(catalogNum);
+            });
+        });
+    } catch (error) {
+        console.error('Error loading inventory table:', error);
+    }
+}
+
+/**
+ * Show details for a specific item
+ */
+function showItemDetails(catalogNum) {
+    try {
+        const item = Database.getItemByCatalog(catalogNum);
+        if (!item) {
+            alert('Item not found.');
+            return;
+        }
+        
+        // Create a modal to show details
+        const modalId = 'item-details-modal';
+        let modal = document.getElementById(modalId);
+        
+        // Remove existing modal if it exists
+        if (modal) {
+            document.body.removeChild(modal);
+        }
+        
+        // Create a new modal
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal fade';
+        modal.tabIndex = -1;
+        modal.setAttribute('aria-hidden', 'true');
+        
+        // Collect all item properties
+        const fields = Object.keys(item);
+        const fieldsHTML = fields.map(field => {
+            const value = item[field] || '';
+            const isIncomplete = !value && ['Order', 'Family', 'Genus', 'Species', 'Common Name', 
+                'Location', 'Country', 'How collected', 'Date collected'].includes(field);
+            
+            return `
+                <div class="row mb-2">
+                    <div class="col-md-4 fw-bold">${field}:</div>
+                    <div class="col-md-8 ${isIncomplete ? 'text-danger fst-italic' : ''}">${isIncomplete ? 'Missing' : value}</div>
+                </div>
+            `;
+        }).join('');
+        
+        // Build modal content
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Item Details: ${item['Catalog #']}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${fieldsHTML}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary edit-item-btn" data-catalog="${item['Catalog #']}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to the document
+        document.body.appendChild(modal);
+        
+        // Initialize and show the modal
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        // Add event listener for edit button
+        modal.querySelector('.edit-item-btn').addEventListener('click', function() {
+            const catalog = this.getAttribute('data-catalog');
+            
+            // Close this modal
+            bsModal.hide();
+            
+            // Check if item is incomplete
+            if (isIncompleteRecord(item)) {
+                // Navigate to incomplete tab
+                const incompleteLink = document.getElementById('incomplete-link');
+                if (incompleteLink) {
+                    incompleteLink.click();
                     
-                    count = allData.filter(item => 
-                        item.Order && !allDefinedOrders.includes(item.Order)
-                    ).length;
+                    // Flash the row with this catalog
+                    setTimeout(() => {
+                        // Try to find in tabbed interface first
+                        const tabRows = document.querySelectorAll(`.taxonomy-tabs tr[data-catalog="${catalog}"]`);
+                        if (tabRows.length > 0) {
+                            // If we found it in tabs, highlight it
+                            tabRows.forEach(row => {
+                                row.classList.add('bg-info');
+                                setTimeout(() => row.classList.remove('bg-info'), 2000);
+                                
+                                // Scroll to the row
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                
+                                // Click on the tab that contains this row
+                                const tabPane = row.closest('.tab-pane');
+                                if (tabPane) {
+                                    const tabId = tabPane.id;
+                                    const tab = document.querySelector(`[data-bs-target="#${tabId}"]`);
+                                    if (tab) {
+                                        tab.click();
+                                    }
+                                }
+                            });
+                        } else {
+                            // Otherwise look in the original interface
+                            const row = document.querySelector(`#incomplete-table tr[data-catalog="${catalog}"]`);
+                            if (row) {
+                                row.classList.add('bg-info');
+                                setTimeout(() => row.classList.remove('bg-info'), 2000);
+                                
+                                // Scroll to the row
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+                    }, 500);
                 }
-                
-                updateTabCount(tableId, count);
-            });
-            
-            console.log('All tab counts updated');
-        } catch (error) {
-            console.error('Error calculating tab counts:', error);
-        }
-    }
-    
-    // Public API
-    return {
-        init,
-        refreshAllTabs,
-        loadTabData,
-        calculateAllTabCounts
-    };
-    // Make sure incomplete records load when needed
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait a bit to ensure everything is loaded
-    setTimeout(function() {
-        // If we're on the incomplete records page, load them
-        if (!document.getElementById('incomplete').classList.contains('d-none')) {
-            if (typeof IncompleteRecords !== 'undefined' && 
-                typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-                console.log('Explicitly loading incomplete records...');
-                IncompleteRecords.loadIncompleteRecords();
+            } else {
+                // Navigate to update tab
+                const updateLink = document.getElementById('update-link');
+                if (updateLink) {
+                    updateLink.click();
+                    
+                    // TODO: Add edit form for complete items if needed
+                    alert('Edit functionality for complete records is not yet implemented.');
+                }
             }
-        }
+        });
+    } catch (error) {
+        console.error('Error showing item details:', error);
+    }
+}
+
+/**
+ * Check if a record has incomplete fields
+ */
+function isIncompleteRecord(item) {
+    // Define required fields (same as in Database.hasIncompleteFields)
+    const requiredFields = [
+        'Order', 'Family', 'Genus', 'Species', 'Common Name', 
+        'Location', 'Country', 'How collected', 'Date collected'
+    ];
+    
+    return requiredFields.some(field => 
+        !item[field] || item[field].toString().trim() === ''
+    );
+}
+
+/**
+ * Function to modify the save behavior for incomplete records
+ * to work with the tabbed interface
+ */
+function modifyIncompleteRecordsSaveFunction() {
+    // Only modify if both modules exist
+    if (typeof IncompleteRecords !== 'undefined' && 
+        typeof TabbedIncompleteRecords !== 'undefined' &&
+        typeof TabbedIncompleteRecords.saveAllChanges === 'function') {
         
-        // Update inventory tab counts
-        if (typeof TabbedInventory !== 'undefined' && 
-            typeof TabbedInventory.calculateAllTabCounts === 'function') {
-            console.log('Calculating tab counts...');
-            TabbedInventory.calculateAllTabCounts();
-        }
-    }, 1000);
-});
-    document.addEventListener('DOMContentLoaded', function() {
-    // Check if we need to load the incomplete records
-    setTimeout(function() {
-        const incompleteSection = document.getElementById('incomplete');
-        if (incompleteSection && !incompleteSection.classList.contains('d-none') && 
-            typeof IncompleteRecords !== 'undefined' && 
-            typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-            console.log('Explicitly loading incomplete records...');
-            IncompleteRecords.loadIncompleteRecords();
-        }
-    }, 1000); // Delay to ensure everything is loaded
-});
-})();
+        // Store the original function
+        const originalSaveFunction = IncompleteRecords.saveAllChanges;
+        
+        // Override with a function that checks which interface is active
+        IncompleteRecords.saveAllChanges = function() {
+            // Check if the tabbed interface is active
+            const tabsElement = document.querySelector('#incompleteTaxonomyTabs');
+            if (tabsElement && window.getComputedStyle(tabsElement).display !== 'none') {
+                // Use the tabbed interface save function
+                TabbedIncompleteRecords.saveAllChanges();
+            } else {
+                // Use the original save function
+                originalSaveFunction();
+            }
+        };
+    }
+}
