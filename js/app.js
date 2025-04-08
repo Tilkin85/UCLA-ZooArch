@@ -1,5 +1,5 @@
 /**
- * ZOARCH Lab Inventory - Main Application (Enhanced)
+ * ZOARCH Lab Inventory - Main Application (Enhanced and Fixed)
  */
 
 // Wait for the DOM to be fully loaded
@@ -8,6 +8,12 @@ document.addEventListener('DOMContentLoaded', function() {
     initApp().then(() => {
         // After everything is loaded, modify the save function
         modifyIncompleteRecordsSaveFunction();
+        
+        // Pre-calculate tab counts for inventory
+        if (typeof TabbedInventory !== 'undefined' && 
+            typeof TabbedInventory.calculateAllTabCounts === 'function') {
+            TabbedInventory.calculateAllTabCounts();
+        }
     }).catch(error => {
         console.error("Error during initialization:", error);
     });
@@ -30,7 +36,13 @@ async function initApp() {
         const useGitHub = localStorage.getItem('zoarch_use_github') === 'true';
         const config = {
             useGitHub: useGitHub,
-            github: {}
+            github: {
+                owner: localStorage.getItem('zoarch_github_owner'),
+                repo: localStorage.getItem('zoarch_github_repo'),
+                branch: localStorage.getItem('zoarch_github_branch'),
+                path: localStorage.getItem('zoarch_github_path'),
+                token: sessionStorage.getItem('zoarch_github_token')
+            }
         };
         
         // Initialize the database
@@ -74,6 +86,7 @@ async function initApp() {
             if (typeof IncompleteRecords !== 'undefined' && 
                 IncompleteRecords && 
                 typeof IncompleteRecords.init === 'function') {
+                console.log('Initializing IncompleteRecords module...');
                 IncompleteRecords.init();
             }
         } catch (incompleteError) {
@@ -128,6 +141,9 @@ async function initApp() {
         } catch (chartError) {
             console.warn("Error initializing charts, continuing without visualizations:", chartError);
         }
+        
+        // Initialize GitHub status
+        updateGitHubStatus();
         
         console.log('Loading complete');
     } catch (error) {
@@ -645,194 +661,4 @@ function loadInventoryTable() {
             tableBody.appendChild(row);
         });
         
-        // Add click handlers for details buttons
-        const detailsButtons = document.querySelectorAll('.view-details-btn');
-        detailsButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const catalogNum = this.getAttribute('data-catalog');
-                showItemDetails(catalogNum);
-            });
-        });
-    } catch (error) {
-        console.error('Error loading inventory table:', error);
-    }
-}
-
-/**
- * Show details for a specific item
- */
-function showItemDetails(catalogNum) {
-    try {
-        const item = Database.getItemByCatalog(catalogNum);
-        if (!item) {
-            alert('Item not found.');
-            return;
-        }
-        
-        // Create a modal to show details
-        const modalId = 'item-details-modal';
-        let modal = document.getElementById(modalId);
-        
-        // Remove existing modal if it exists
-        if (modal) {
-            document.body.removeChild(modal);
-        }
-        
-        // Create a new modal
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'modal fade';
-        modal.tabIndex = -1;
-        modal.setAttribute('aria-hidden', 'true');
-        
-        // Collect all item properties
-        const fields = Object.keys(item);
-        const fieldsHTML = fields.map(field => {
-            const value = item[field] || '';
-            const isIncomplete = !value && ['Order', 'Family', 'Genus', 'Species', 'Common Name', 
-                'Location', 'Country', 'How collected', 'Date collected'].includes(field);
-            
-            return `
-                <div class="row mb-2">
-                    <div class="col-md-4 fw-bold">${field}:</div>
-                    <div class="col-md-8 ${isIncomplete ? 'text-danger fst-italic' : ''}">${isIncomplete ? 'Missing' : value}</div>
-                </div>
-            `;
-        }).join('');
-        
-        // Build modal content
-        modal.innerHTML = `
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Item Details: ${item['Catalog #']}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        ${fieldsHTML}
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary edit-item-btn" data-catalog="${item['Catalog #']}">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Add modal to the document
-        document.body.appendChild(modal);
-        
-        // Initialize and show the modal
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-        
-        // Add event listener for edit button
-        modal.querySelector('.edit-item-btn').addEventListener('click', function() {
-            const catalog = this.getAttribute('data-catalog');
-            
-            // Close this modal
-            bsModal.hide();
-            
-            // Check if item is incomplete
-            if (isIncompleteRecord(item)) {
-                // Navigate to incomplete tab
-                const incompleteLink = document.getElementById('incomplete-link');
-                if (incompleteLink) {
-                    incompleteLink.click();
-                    
-                    // Flash the row with this catalog
-                    setTimeout(() => {
-                        // Try to find in tabbed interface first
-                        const tabRows = document.querySelectorAll(`.taxonomy-tabs tr[data-catalog="${catalog}"]`);
-                        if (tabRows.length > 0) {
-                            // If we found it in tabs, highlight it
-                            tabRows.forEach(row => {
-                                row.classList.add('bg-info');
-                                setTimeout(() => row.classList.remove('bg-info'), 2000);
-                                
-                                // Scroll to the row
-                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                
-                                // Click on the tab that contains this row
-                                const tabPane = row.closest('.tab-pane');
-                                if (tabPane) {
-                                    const tabId = tabPane.id;
-                                    const tab = document.querySelector(`[data-bs-target="#${tabId}"]`);
-                                    if (tab) {
-                                        tab.click();
-                                    }
-                                }
-                            });
-                        } else {
-                            // Otherwise look in the original interface
-                            const row = document.querySelector(`#incomplete-table tr[data-catalog="${catalog}"]`);
-                            if (row) {
-                                row.classList.add('bg-info');
-                                setTimeout(() => row.classList.remove('bg-info'), 2000);
-                                
-                                // Scroll to the row
-                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                        }
-                    }, 500);
-                }
-            } else {
-                // Navigate to update tab
-                const updateLink = document.getElementById('update-link');
-                if (updateLink) {
-                    updateLink.click();
-                    
-                    // TODO: Add edit form for complete items if needed
-                    alert('Edit functionality for complete records is not yet implemented.');
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Error showing item details:', error);
-    }
-}
-
-/**
- * Check if a record has incomplete fields
- */
-function isIncompleteRecord(item) {
-    // Define required fields (same as in Database.hasIncompleteFields)
-    const requiredFields = [
-        'Order', 'Family', 'Genus', 'Species', 'Common Name', 
-        'Location', 'Country', 'How collected', 'Date collected'
-    ];
-    
-    return requiredFields.some(field => 
-        !item[field] || item[field].toString().trim() === ''
-    );
-}
-
-/**
- * Function to modify the save behavior for incomplete records
- * to work with the tabbed interface
- */
-function modifyIncompleteRecordsSaveFunction() {
-    // Only modify if both modules exist
-    if (typeof IncompleteRecords !== 'undefined' && 
-        typeof TabbedIncompleteRecords !== 'undefined' &&
-        typeof TabbedIncompleteRecords.saveAllChanges === 'function') {
-        
-        // Store the original function
-        const originalSaveFunction = IncompleteRecords.saveAllChanges;
-        
-        // Override with a function that checks which interface is active
-        IncompleteRecords.saveAllChanges = function() {
-            // Check if the tabbed interface is active
-            const tabsElement = document.querySelector('#incompleteTaxonomyTabs');
-            if (tabsElement && window.getComputedStyle(tabsElement).display !== 'none') {
-                // Use the tabbed interface save function
-                TabbedIncompleteRecords.saveAllChanges();
-            } else {
-                // Use the original save function
-                originalSaveFunction();
-            }
-        };
-    }
-}
+        // Add click
