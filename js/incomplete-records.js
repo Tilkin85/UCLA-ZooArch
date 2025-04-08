@@ -1,5 +1,5 @@
 /**
- * ZOARCH Lab Inventory - Incomplete Records Management (Fixed)
+ * ZOARCH Lab Inventory - Incomplete Records Management
  */
 
 // IncompleteRecords namespace
@@ -28,8 +28,6 @@ const IncompleteRecords = (function() {
      */
     function init() {
         try {
-            console.log('Initializing incomplete records module...');
-            
             // Get DOM elements
             elements.table = document.getElementById('incomplete-table');
             elements.tableBody = document.getElementById('incomplete-table-body');
@@ -40,7 +38,7 @@ const IncompleteRecords = (function() {
             elements.configureGitHubBtn = document.getElementById('configure-github-btn');
             
             if (!elements.table || !elements.tableBody || !elements.saveButton) {
-                console.warn('Required DOM elements for incomplete records not found. This is normal if not on incomplete records page.');
+                console.warn('Required DOM elements for incomplete records not found');
                 return false;
             }
             
@@ -51,9 +49,6 @@ const IncompleteRecords = (function() {
             if (typeof GitHubStorage !== 'undefined') {
                 initGitHubConfigUI();
             }
-            
-            // Load incomplete records on initialization
-            loadIncompleteRecords();
             
             console.log('Incomplete records functionality initialized');
             return true;
@@ -68,14 +63,6 @@ const IncompleteRecords = (function() {
      */
     function loadIncompleteRecords() {
         try {
-            console.log('Loading incomplete records...');
-            
-            // Make sure elements exist before continuing
-            if (!elements.tableBody) {
-                console.warn('Table body element not found for incomplete records');
-                return;
-            }
-            
             // Clear the table and reset cache
             elements.tableBody.innerHTML = '';
             incompleteData = [];
@@ -86,7 +73,6 @@ const IncompleteRecords = (function() {
             
             // Get incomplete records from the database
             const records = Database.getIncompleteRecords();
-            console.log(`Retrieved ${records.length} incomplete records from database`);
             incompleteData = [...records]; // Copy the array
             
             // Update the summary info
@@ -97,12 +83,12 @@ const IncompleteRecords = (function() {
                 const row = document.createElement('tr');
                 row.innerHTML = `<td colspan="11" class="text-center">No incomplete records found. Great job!</td>`;
                 elements.tableBody.appendChild(row);
-                if (elements.saveButton) elements.saveButton.disabled = true;
+                elements.saveButton.disabled = true;
                 return;
             }
             
             // Enable the save button
-            if (elements.saveButton) elements.saveButton.disabled = false;
+            elements.saveButton.disabled = false;
             
             // Define the fields we want to display
             const fields = [
@@ -147,17 +133,6 @@ const IncompleteRecords = (function() {
             console.log(`Loaded ${records.length} incomplete records`);
         } catch (error) {
             console.error('Error loading incomplete records:', error);
-            
-            // Show error in the table if possible
-            if (elements.tableBody) {
-                elements.tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="11" class="text-center text-danger">
-                            Error loading incomplete records. Please check the console for details.
-                        </td>
-                    </tr>
-                `;
-            }
         }
     }
     
@@ -170,14 +145,10 @@ const IncompleteRecords = (function() {
                 const mode = Database.getStorageMode();
                 if (mode === 'github') {
                     elements.storageStatus.innerHTML = `<span class="text-success">Current: GitHub Storage</span>`;
-                    if (elements.configureGitHubBtn) {
-                        elements.configureGitHubBtn.textContent = 'Update GitHub Settings';
-                    }
+                    elements.configureGitHubBtn.textContent = 'Update GitHub Settings';
                 } else {
                     elements.storageStatus.innerHTML = `<span class="text-secondary">Current: Local Storage</span>`;
-                    if (elements.configureGitHubBtn) {
-                        elements.configureGitHubBtn.textContent = 'Configure GitHub Storage';
-                    }
+                    elements.configureGitHubBtn.textContent = 'Configure GitHub Storage';
                 }
             }
         } catch (error) {
@@ -294,9 +265,6 @@ const IncompleteRecords = (function() {
             // Update data in cache
             incompleteData[activeEditCell.index][activeEditCell.field] = newValue;
             
-            // Enable save button
-            if (elements.saveButton) elements.saveButton.disabled = false;
-            
             // Update highlighting
             if (!newValue) {
                 cell.classList.add('bg-light', 'text-danger', 'incomplete-cell');
@@ -365,7 +333,7 @@ const IncompleteRecords = (function() {
             
             // Save each modified record
             for (const catalog of modifiedRows) {
-                const recordIndex = incompleteData.findIndex(r => String(r['Catalog #']) === String(catalog));
+                const recordIndex = incompleteData.findIndex(r => r['Catalog #'] == catalog);
                 if (recordIndex === -1) continue;
                 
                 const updatedRecord = incompleteData[recordIndex];
@@ -432,8 +400,6 @@ const IncompleteRecords = (function() {
      */
     function initGitHubConfigUI() {
         try {
-            console.log('Initializing GitHub config UI...');
-            
             // Get GitHub config button and modal elements
             const configBtn = document.getElementById('configure-github-btn');
             const configModal = document.getElementById('github-config-modal');
@@ -446,7 +412,6 @@ const IncompleteRecords = (function() {
             
             // Add click handler for config button
             configBtn.addEventListener('click', function() {
-                console.log('Opening GitHub config modal');
                 const modal = new bootstrap.Modal(configModal);
                 
                 // Pre-fill the form with current values if available
@@ -460,9 +425,6 @@ const IncompleteRecords = (function() {
                 document.getElementById('github-branch').value = branch;
                 document.getElementById('github-path').value = path;
                 
-                // Clear the token field for security
-                document.getElementById('github-token').value = '';
-                
                 // Show the modal
                 modal.show();
             });
@@ -470,8 +432,6 @@ const IncompleteRecords = (function() {
             // Add click handler for save button
             saveConfigBtn.addEventListener('click', async function() {
                 try {
-                    console.log('Saving GitHub configuration...');
-                    
                     // Show working indicator
                     saveConfigBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
                     saveConfigBtn.disabled = true;
@@ -498,53 +458,33 @@ const IncompleteRecords = (function() {
                     localStorage.setItem('zoarch_github_path', path);
                     localStorage.setItem('zoarch_use_github', 'true');
                     
-                    // Store token in sessionStorage
-                    sessionStorage.setItem('zoarch_github_token', token);
+                    // Initialize GitHub storage
+                    const config = { owner, repo, branch, path, token };
+                    const initialized = await GitHubStorage.init(config);
                     
-                    // Set storage mode directly in Database
-                    if (typeof Database !== 'undefined' && typeof Database.setStorageMode === 'function') {
-                        Database.setStorageMode('github');
-                    }
-                    
-                    // Close the modal
-                    const bsModal = bootstrap.Modal.getInstance(configModal);
-                    if (bsModal) bsModal.hide();
-                    
-                    // Update storage status display
-                    updateStorageStatus();
-                    
-                    // Show success message
-                    alert('GitHub configuration saved successfully! The app will now use GitHub for storage.');
-                    
-                    // Initialize GitHub storage if available
-                    if (typeof GitHubStorage !== 'undefined' && typeof GitHubStorage.init === 'function') {
-                        console.log('Initializing GitHub storage with new config...');
-                        const config = { owner, repo, branch, path, token };
-                        const initialized = await GitHubStorage.init(config);
+                    if (initialized) {
+                        // Set the token securely
+                        GitHubStorage.setToken(token);
                         
-                        if (initialized) {
-                            console.log('GitHub storage initialized successfully');
-                            
-                            // Set the token securely
-                            if (typeof GitHubStorage.setToken === 'function') {
-                                GitHubStorage.setToken(token);
-                            }
-                            
-                            // Refresh data if needed
-                            const confirmed = confirm('Do you want to reload the page to apply the GitHub settings? Any unsaved changes will be lost.');
-                            if (confirmed) {
-                                location.reload();
-                            }
-                        } else {
-                            console.warn('GitHub initialization failed');
-                            alert('GitHub configuration saved, but connection failed. Please check your settings and try again.');
-                        }
-                    } else {
-                        // If GitHubStorage is not available, just reload the page
-                        const confirmed = confirm('Do you want to reload the page to apply the GitHub settings? Any unsaved changes will be lost.');
+                        // Set storage mode in Database
+                        Database.setStorageMode('github');
+                        
+                        // Close the modal
+                        bootstrap.Modal.getInstance(configModal).hide();
+                        
+                        // Show success message
+                        alert('GitHub configuration saved successfully! The app will now use GitHub for storage.');
+                        
+                        // Update storage status
+                        updateStorageStatus();
+                        
+                        // Refresh data if needed
+                        const confirmed = confirm('Do you want to load the data from GitHub now? Any unsaved local changes will be lost.');
                         if (confirmed) {
                             location.reload();
                         }
+                    } else {
+                        alert('Failed to connect to GitHub. Please check your settings and token.');
                     }
                 } catch (error) {
                     console.error('Error saving GitHub config:', error);
@@ -563,8 +503,6 @@ const IncompleteRecords = (function() {
                     configBtn.click();
                 });
             }
-            
-            console.log('GitHub config UI initialized');
         } catch (error) {
             console.error('Error initializing GitHub config UI:', error);
         }
