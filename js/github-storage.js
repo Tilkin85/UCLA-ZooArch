@@ -23,41 +23,20 @@ const GitHubStorage = (function() {
     function init(userConfig) {
         return new Promise((resolve, reject) => {
             try {
-                console.log('Initializing GitHub storage...');
-                
                 // Apply user configuration
                 config = { ...config, ...userConfig };
+                
+               // Validate required config - only if trying to test connection
+            if (config.token && (config.owner === undefined || config.repo === undefined)) {
+                console.warn('GitHub owner and repo are not provided');
+                resolve(false); // Don't reject, just return false
+                return;
+                }
                 
                 // Try to get stored token from sessionStorage (more secure than localStorage)
                 if (!config.token) {
                     config.token = sessionStorage.getItem('zoarch_github_token');
                 }
-                
-                // Try to get other config from localStorage if not provided
-                if (!config.owner) {
-                    config.owner = localStorage.getItem('zoarch_github_owner');
-                }
-                
-                if (!config.repo) {
-                    config.repo = localStorage.getItem('zoarch_github_repo');
-                }
-                
-                if (!config.branch || config.branch === '') {
-                    config.branch = localStorage.getItem('zoarch_github_branch') || 'main';
-                }
-                
-                if (!config.path || config.path === '') {
-                    config.path = localStorage.getItem('zoarch_github_path') || 'data/inventory.json';
-                }
-                
-                // Check if we have the necessary config
-                if (!config.token || !config.owner || !config.repo) {
-                    console.warn('GitHub storage not fully configured: missing token, owner, or repo');
-                    resolve(false);
-                    return;
-                }
-                
-                console.log(`GitHub config set for ${config.owner}/${config.repo} (${config.branch})`);
                 
                 // Check for basic connectivity
                 testConnection()
@@ -86,13 +65,6 @@ const GitHubStorage = (function() {
                 reject(new Error('GitHub token not provided'));
                 return;
             }
-            
-            if (!config.owner || !config.repo) {
-                reject(new Error('GitHub owner or repo not provided'));
-                return;
-            }
-            
-            console.log(`Testing connection to ${config.owner}/${config.repo}...`);
             
             // Make a simple API call to test connection
             fetch(`https://api.github.com/repos/${config.owner}/${config.repo}`, {
@@ -152,13 +124,6 @@ const GitHubStorage = (function() {
                 return;
             }
             
-            if (!config.owner || !config.repo || !config.path) {
-                reject(new Error('GitHub repository not properly configured'));
-                return;
-            }
-            
-            console.log(`Fetching inventory data from GitHub (${config.owner}/${config.repo}/${config.path})...`);
-            
             fetch(`https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}?ref=${config.branch}`, {
                 headers: {
                     'Authorization': `token ${config.token}`,
@@ -169,7 +134,6 @@ const GitHubStorage = (function() {
                 if (!response.ok) {
                     // File might not exist yet
                     if (response.status === 404) {
-                        console.log('File not found on GitHub, returning empty array');
                         return { content: btoa('[]') }; // Base64 encoded empty array
                     }
                     throw new Error(`GitHub API error: ${response.status}`);
@@ -185,7 +149,6 @@ const GitHubStorage = (function() {
                 config.fileSha = data.sha;
                 config.lastSyncTime = new Date();
                 
-                console.log(`Successfully retrieved ${parsedData.length} records from GitHub`);
                 resolve(parsedData);
             })
             .catch(error => {
@@ -206,13 +169,6 @@ const GitHubStorage = (function() {
                 reject(new Error('GitHub token not provided'));
                 return;
             }
-            
-            if (!config.owner || !config.repo || !config.path) {
-                reject(new Error('GitHub repository not properly configured'));
-                return;
-            }
-            
-            console.log(`Saving inventory data to GitHub (${config.owner}/${config.repo}/${config.path})...`);
             
             // Convert data to JSON string and base64 encode
             const content = JSON.stringify(data, null, 2);
@@ -269,22 +225,6 @@ const GitHubStorage = (function() {
         return config.lastSyncTime;
     }
     
-    /**
-     * Get the current configuration
-     * @returns {Object} Current configuration
-     */
-    function getConfig() {
-        // Return a copy without the token for security
-        return {
-            owner: config.owner,
-            repo: config.repo,
-            branch: config.branch,
-            path: config.path,
-            hasToken: !!config.token,
-            lastSyncTime: config.lastSyncTime
-        };
-    }
-    
     // Public API
     return {
         init,
@@ -292,7 +232,6 @@ const GitHubStorage = (function() {
         hasToken,
         getInventoryData,
         saveInventoryData,
-        getLastSyncTime,
-        getConfig
+        getLastSyncTime
     };
 })();
