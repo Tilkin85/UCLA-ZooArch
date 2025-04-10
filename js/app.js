@@ -8,6 +8,46 @@ document.addEventListener('DOMContentLoaded', function() {
     initApp().then(() => {
         // After everything is loaded, modify the save function
         modifyIncompleteRecordsSaveFunction();
+        // Setup GitHub modal Save button
+const saveButton = document.getElementById('save-github-config');
+const statusText = document.getElementById('github-config-status');
+
+if (saveButton) {
+    saveButton.addEventListener('click', async () => {
+        const owner = document.getElementById('github-owner').value.trim();
+        const repo = document.getElementById('github-repo').value.trim();
+        const branch = document.getElementById('github-branch').value.trim();
+        const path = document.getElementById('github-path').value.trim();
+        const token = document.getElementById('github-token').value.trim();
+
+        if (!owner || !repo || !branch || !path || !token) {
+            statusText.textContent = "Please fill in all fields.";
+            return;
+        }
+
+        sessionStorage.setItem('zoarch_github_token', token);
+
+        const success = await GitHubStorage.init({
+            owner,
+            repo,
+            branch,
+            path,
+            token
+        });
+
+        if (success) {
+            statusText.textContent = "✅ Connected to GitHub successfully!";
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            statusText.textContent = "❌ Failed to connect. Check your token or repo settings.";
+        }
+    });
+
+    console.log('GitHub save config handler added');
+} else {
+    console.error('GitHub save config button not found');
+}
+
     }).catch(error => {
         console.error("Error during initialization:", error);
     });
