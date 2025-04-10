@@ -71,8 +71,21 @@ const IncompleteRecords = (function() {
             // Update storage status display
             updateStorageStatus();
             
+            // Check that the Database object exists and the method is available
+            if (typeof Database === 'undefined' || typeof Database.getIncompleteRecords !== 'function') {
+                console.error('Database API is not defined or getIncompleteRecords method is missing.');
+                return;
+            }
+            
             // Get incomplete records from the database
             const records = Database.getIncompleteRecords();
+            
+            // Ensure we got an array from the Database
+            if (!records || !Array.isArray(records)) {
+                console.error('Database.getIncompleteRecords() did not return a valid array.');
+                return;
+            }
+            
             incompleteData = [...records]; // Copy the array
             
             // Update the summary info
@@ -109,7 +122,7 @@ const IncompleteRecords = (function() {
                     cell.textContent = value;
                     cell.dataset.field = field;
                     
-                    // Highlight empty cells
+                    // Highlight empty cells (skip required fields)
                     if (!value && field !== 'Catalog #' && field !== 'Owner') {
                         cell.classList.add('bg-light', 'text-danger', 'incomplete-cell');
                     }
@@ -142,7 +155,7 @@ const IncompleteRecords = (function() {
     function updateStorageStatus() {
         try {
             if (elements.storageStatus) {
-                const mode = Database.getStorageMode();
+                const mode = Database.getStorageMode ? Database.getStorageMode() : 'local';
                 if (mode === 'github') {
                     elements.storageStatus.innerHTML = `<span class="text-success">Current: GitHub Storage</span>`;
                     elements.configureGitHubBtn.textContent = 'Update GitHub Settings';
@@ -162,7 +175,8 @@ const IncompleteRecords = (function() {
     function updateSummaryInfo(records) {
         try {
             if (elements.summaryElement) {
-                const stats = Database.getSummaryStats();
+                // Check that Database.getSummaryStats exists
+                const stats = Database.getSummaryStats ? Database.getSummaryStats() : { totalItems: records.length };
                 const totalRecords = stats.totalItems;
                 const incompleteCount = records.length;
                 const completeCount = totalRecords - incompleteCount;
@@ -337,7 +351,7 @@ const IncompleteRecords = (function() {
                 if (recordIndex === -1) continue;
                 
                 const updatedRecord = incompleteData[recordIndex];
-                const saveResult = Database.updateItem(catalog, updatedRecord);
+                const saveResult = Database.updateItem ? Database.updateItem(catalog, updatedRecord) : false;
                 
                 if (!saveResult) {
                     console.error('Failed to save record:', catalog);
@@ -467,7 +481,9 @@ const IncompleteRecords = (function() {
                         GitHubStorage.setToken(token);
                         
                         // Set storage mode in Database
-                        Database.setStorageMode('github');
+                        if (Database.setStorageMode) {
+                            Database.setStorageMode('github');
+                        }
                         
                         // Close the modal
                         bootstrap.Modal.getInstance(configModal).hide();
@@ -515,3 +531,12 @@ const IncompleteRecords = (function() {
         saveAllChanges
     };
 })();
+
+// Ensure the DOM is fully loaded before initializing and loading records
+document.addEventListener('DOMContentLoaded', () => {
+    if (IncompleteRecords.init()) {
+        IncompleteRecords.loadIncompleteRecords();
+    } else {
+        console.error('IncompleteRecords initialization failed. Please verify that all required DOM elements exist.');
+    }
+});
