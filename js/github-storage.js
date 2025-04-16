@@ -12,7 +12,8 @@ const GitHubStorage = (function() {
         branch: 'main',      // Branch to use
         path: 'data/inventory.json', // Path to the data file
         token: '',           // GitHub Personal Access Token (PAT) - will be stored securely
-        lastSyncTime: null   // Track last sync time
+        lastSyncTime: null,  // Track last sync time
+        fileSha: null        // Store file SHA for updates
     };
 
     /**
@@ -26,16 +27,22 @@ const GitHubStorage = (function() {
                 // Apply user configuration
                 config = { ...config, ...userConfig };
                 
-               // Validate required config - only if trying to test connection
-            if (config.token && (config.owner === undefined || config.repo === undefined)) {
-                console.warn('GitHub owner and repo are not provided');
-                resolve(false); // Don't reject, just return false
-                return;
-                }
-                
-                // Try to get stored token from sessionStorage (more secure than localStorage)
+                // Try to get stored token from sessionStorage if not provided
                 if (!config.token) {
                     config.token = sessionStorage.getItem('zoarch_github_token');
+                }
+                
+                // Validate required config
+                if (!config.token) {
+                    console.warn('GitHub token not provided');
+                    resolve(false);
+                    return;
+                }
+                
+                if (!config.owner || !config.repo) {
+                    console.warn('GitHub owner and repo are required');
+                    resolve(false);
+                    return;
                 }
                 
                 // Check for basic connectivity
