@@ -132,8 +132,6 @@ The application expects data with the following fields (not all are required):
 
 ### Modifying the Interface
 
-The interface is built using Bootstrap 5, which makes it easy to customize:
-
 - **Colors and Styles**: Edit the `css/styles.css` file
 - **Layout**: Modify the HTML structure in `index.html`
 - **Functionality**: Adjust the JavaScript in the `js/` folder
@@ -152,19 +150,14 @@ The codebase is structured to be easily extensible:
 - Cloud sync for collaborative editing
 - Advanced filtering by geographic location
 - Image attachment capability for specimens
-- QR code generation for physical labeling
+
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Acknowledgments
 
-- Bootstrap team for the excellent CSS framework
-- Chart.js for the visualization library
-- SheetJS for Excel file handling
-- DataTables for enhanced table functionality
+
