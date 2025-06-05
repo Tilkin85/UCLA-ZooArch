@@ -1,55 +1,15 @@
 /**
- * ZOARCH Lab Inventory - Main Application (Enhanced)
+ * ZOARCH Lab Inventory - Main Application (Cleaned)
  */
 
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize the application
     initApp().then(() => {
-        // After everything is loaded, modify the save function
-        modifyIncompleteRecordsSaveFunction();
-        // Setup GitHub modal Save button
-const saveButton = document.getElementById('save-github-config');
-const statusText = document.getElementById('github-config-status');
-
-if (saveButton) {
-    saveButton.addEventListener('click', async () => {
-        const owner = document.getElementById('github-owner').value.trim();
-        const repo = document.getElementById('github-repo').value.trim();
-        const branch = document.getElementById('github-branch').value.trim();
-        const path = document.getElementById('github-path').value.trim();
-        const token = document.getElementById('github-token').value.trim();
-
-        if (!owner || !repo || !branch || !path || !token) {
-            statusText.textContent = "Please fill in all fields.";
-            return;
-        }
-
-        sessionStorage.setItem('zoarch_github_token', token);
-
-        const success = await GitHubStorage.init({
-            owner,
-            repo,
-            branch,
-            path,
-            token
-        });
-
-        if (success) {
-            statusText.textContent = "✅ Connected to GitHub successfully!";
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            statusText.textContent = "❌ Failed to connect. Check your token or repo settings.";
-        }
-    });
-
-    console.log('GitHub save config handler added');
-} else {
-    console.error('GitHub save config button not found');
-}
-
+        console.log('ZOARCH Lab Inventory initialized successfully');
     }).catch(error => {
         console.error("Error during initialization:", error);
+        alert('There was an error initializing the application. Please check the console for details.');
     });
 });
 
@@ -57,15 +17,9 @@ if (saveButton) {
  * Initialize the application
  */
 async function initApp() {
-    // Show loading indicator
-    console.log('Loading...');
+    console.log('Initializing ZOARCH Lab Inventory...');
     
     try {
-        // Make sure required modules are defined
-        if (typeof Database === 'undefined') {
-            throw new Error('Database module not loaded properly');
-        }
-        
         // Check for GitHub configuration
         const useGitHub = localStorage.getItem('zoarch_use_github') === 'true';
         const config = {
@@ -79,101 +33,49 @@ async function initApp() {
         // Setup UI elements
         setupNavigation();
         setupEventListeners();
+        setupGitHubConfiguration();
         
         // Load and display initial data
         loadDashboardData();
         
-        // Initialize the tabbed inventory display (if available)
-        try {
-            if (typeof TabbedInventory !== 'undefined' && 
-                TabbedInventory && 
-                typeof TabbedInventory.init === 'function') {
-                const tabInit = TabbedInventory.init();
-                if (tabInit) {
-                    console.log('Tabbed inventory initialized');
-                    // Load data for the active tab
-                    const activeTab = document.querySelector('#taxonomyTabContent .tab-pane.active table');
-                    if (activeTab) {
-                        TabbedInventory.loadTabData(activeTab.id);
-                    }
-                } else {
-                    // Fall back to normal inventory loading
-                    loadInventoryTable();
-                }
+        // Initialize the tabbed inventory display
+        if (typeof TabbedInventory !== 'undefined' && TabbedInventory.init) {
+            if (TabbedInventory.init()) {
+                console.log('Tabbed inventory initialized');
             } else {
-                // Fall back to normal inventory loading
-                loadInventoryTable();
+                console.warn('Tabbed inventory initialization returned false');
             }
-        } catch (tabError) {
-            console.warn("Error initializing tabbed inventory, falling back to standard view:", tabError);
-            loadInventoryTable();
+        } else {
+            console.warn('TabbedInventory module not available');
         }
         
-        // Initialize incomplete records if available
-        try {
-            if (typeof IncompleteRecords !== 'undefined' && 
-                IncompleteRecords && 
-                typeof IncompleteRecords.init === 'function') {
-                IncompleteRecords.init();
-            }
-        } catch (incompleteError) {
-            console.warn("Error initializing incomplete records:", incompleteError);
-        }
-        
-        // Initialize tabbed incomplete records if available
-        try {
-            if (typeof TabbedIncompleteRecords !== 'undefined' && 
-                TabbedIncompleteRecords && 
-                typeof TabbedIncompleteRecords.init === 'function') {
-                const tabInit = TabbedIncompleteRecords.init();
-                if (tabInit) {
-                    console.log('Tabbed incomplete records initialized');
-                    // Load data for the active tab
-                    const activeTab = document.querySelector('#incompleteTaxonomyTabContent .tab-pane.active table');
-                    if (activeTab) {
-                        TabbedIncompleteRecords.loadTabData(activeTab.id);
-                    }
-                } else {
-                    // Fall back to normal loading
-                    if (typeof IncompleteRecords !== 'undefined' && 
-                        IncompleteRecords && 
-                        typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-                        IncompleteRecords.loadIncompleteRecords();
-                    }
-                }
-            } else {
-                // Fall back to normal loading
-                if (typeof IncompleteRecords !== 'undefined' && 
-                    IncompleteRecords && 
-                    typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-                    IncompleteRecords.loadIncompleteRecords();
-                }
-            }
-        } catch (tabIncompleteError) {
-            console.warn("Error initializing tabbed incomplete records, falling back to standard view:", tabIncompleteError);
-            if (typeof IncompleteRecords !== 'undefined' && 
-                IncompleteRecords && 
-                typeof IncompleteRecords.loadIncompleteRecords === 'function') {
+        // Initialize incomplete records
+        if (typeof IncompleteRecords !== 'undefined' && IncompleteRecords.init) {
+            if (IncompleteRecords.init()) {
+                console.log('Incomplete records initialized');
+                // Load initial data
                 IncompleteRecords.loadIncompleteRecords();
-            }
-        }
-        
-        // Initialize charts if available
-        try {
-            if (typeof Charts !== 'undefined' && Charts && typeof Charts.initCharts === 'function') {
-                Charts.initCharts(Database.getChartData());
             } else {
-                console.warn("Charts module not available, skipping chart initialization");
+                console.warn('Incomplete records initialization returned false');
             }
-        } catch (chartError) {
-            console.warn("Error initializing charts, continuing without visualizations:", chartError);
+        } else {
+            console.warn('IncompleteRecords module not available');
         }
         
-        console.log('Loading complete');
+        // Initialize charts
+        if (typeof Charts !== 'undefined' && Charts.initCharts) {
+            Charts.initCharts(Database.getChartData());
+        } else {
+            console.warn('Charts module not available');
+        }
+        
+        // Setup GitHub status indicator
+        setupGitHubStatus();
+        
+        console.log('Initialization complete');
     } catch (error) {
-        console.error('Error initializing app:', error);
-        alert('There was an error initializing the application. Please check the console for details.');
-        console.log('Loading complete');
+        console.error('Error during initialization:', error);
+        throw error;
     }
 }
 
@@ -182,11 +84,9 @@ async function initApp() {
  */
 function setupNavigation() {
     try {
-        // Get navigation elements
         const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
         const contentSections = document.querySelectorAll('.content-section');
         
-        // Add click event to each nav link
         navLinks.forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -206,23 +106,13 @@ function setupNavigation() {
                 if (section) {
                     section.classList.remove('d-none');
                     
-                    // Special handling for inventory tab
-                    if (sectionId === 'inventory' && 
-                        typeof TabbedInventory !== 'undefined' && 
-                        typeof TabbedInventory.refreshAllTabs === 'function') {
-                        // Refresh tabs in case data has changed
-                        TabbedInventory.refreshAllTabs();
-                    }
-                    
-                    // Special handling for incomplete tab
-                    if (sectionId === 'incomplete') {
-                        if (typeof TabbedIncompleteRecords !== 'undefined' && 
-                            typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
-                            // Use tabbed interface if available
-                            TabbedIncompleteRecords.refreshAllTabs();
-                        } else if (typeof IncompleteRecords !== 'undefined' && 
-                                  typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-                            // Fall back to original interface
+                    // Special handling for different sections
+                    if (sectionId === 'inventory') {
+                        if (typeof TabbedInventory !== 'undefined' && TabbedInventory.refreshAllTabs) {
+                            TabbedInventory.refreshAllTabs();
+                        }
+                    } else if (sectionId === 'incomplete') {
+                        if (typeof IncompleteRecords !== 'undefined' && IncompleteRecords.loadIncompleteRecords) {
                             IncompleteRecords.loadIncompleteRecords();
                         }
                     }
@@ -242,176 +132,16 @@ function setupEventListeners() {
         // Import form submission
         const importForm = document.getElementById('import-form');
         if (importForm) {
-            importForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const fileInput = document.getElementById('import-file');
-                if (!fileInput.files || fileInput.files.length === 0) {
-                    alert('Please select a file to import.');
-                    return;
-                }
-                
-                const file = fileInput.files[0];
-                const append = confirm('Do you want to append this data to the existing inventory? Click "OK" to append or "Cancel" to replace all data.');
-                
-                console.log('Loading...');
-                
-                Database.importFromFile(file, append)
-                    .then(data => {
-                        alert(`Successfully imported ${data.length} records.`);
-                        
-                        // Reload data and update UI
-                        loadDashboardData();
-                        
-                        // Update tabbed inventory if available
-                        if (typeof TabbedInventory !== 'undefined' && 
-                            typeof TabbedInventory.refreshAllTabs === 'function') {
-                            TabbedInventory.refreshAllTabs();
-                        } else {
-                            loadInventoryTable();
-                        }
-                        
-                        // Update incomplete records if available
-                        if (typeof TabbedIncompleteRecords !== 'undefined' && 
-                            typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
-                            TabbedIncompleteRecords.refreshAllTabs();
-                        } else if (typeof IncompleteRecords !== 'undefined' && 
-                                  typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-                            IncompleteRecords.loadIncompleteRecords();
-                        }
-                        
-                        // Update charts if available
-                        try {
-                            if (typeof Charts !== 'undefined' && Charts && typeof Charts.updateCharts === 'function') {
-                                Charts.updateCharts(Database.getChartData());
-                            }
-                        } catch (chartError) {
-                            console.warn("Error updating charts, but data was imported successfully:", chartError);
-                        }
-                        
-                        // Reset form
-                        importForm.reset();
-                        
-                        console.log('Loading complete');
-                    })
-                    .catch(error => {
-                        alert(`Error importing data: ${error.message}`);
-                        console.log('Loading complete');
-                    });
-            });
+            importForm.addEventListener('submit', handleImport);
         }
         
         // Add entry form
         const addEntryForm = document.getElementById('add-entry-form');
         if (addEntryForm) {
-            addEntryForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Collect form data
-                const newEntry = {
-                    'Owner': document.getElementById('entry-owner').value,
-                    'Catalog #': document.getElementById('entry-catalog').value,
-                    '# of specimens': document.getElementById('entry-specimens').value,
-                    'Order': document.getElementById('entry-order').value,
-                    'Family': document.getElementById('entry-family').value,
-                    'Genus': document.getElementById('entry-genus').value,
-                    'Species': document.getElementById('entry-species').value,
-                    'Common Name': document.getElementById('entry-common').value,
-                    'Location': document.getElementById('entry-location').value,
-                    'Country': document.getElementById('entry-country').value,
-                    'How collected': document.getElementById('entry-collected').value,
-                    'Date collected': document.getElementById('entry-date').value,
-                    'Notes': document.getElementById('entry-notes').value
-                };
-                
-                // Validate required fields
-                if (!newEntry['Catalog #']) {
-                    alert('Catalog # is required.');
-                    return;
-                }
-                
-                // Add the new entry
-                if (Database.addItem(newEntry)) {
-                    alert('Entry added successfully.');
-                    
-                    // Reload data and update UI
-                    loadDashboardData();
-                    
-                    // Update tabbed inventory if available
-                    if (typeof TabbedInventory !== 'undefined' && 
-                        typeof TabbedInventory.refreshAllTabs === 'function') {
-                        TabbedInventory.refreshAllTabs();
-                    } else {
-                        loadInventoryTable();
-                    }
-                    
-                    // Update incomplete records if available
-                    if (typeof TabbedIncompleteRecords !== 'undefined' && 
-                        typeof TabbedIncompleteRecords.refreshAllTabs === 'function') {
-                        TabbedIncompleteRecords.refreshAllTabs();
-                    } else if (typeof IncompleteRecords !== 'undefined' && 
-                              typeof IncompleteRecords.loadIncompleteRecords === 'function') {
-                        IncompleteRecords.loadIncompleteRecords();
-                    }
-                    
-                    // Reset form
-                    addEntryForm.reset();
-                } else {
-                    alert('Failed to add entry. An item with this Catalog # may already exist.');
-                }
-            });
+            addEntryForm.addEventListener('submit', handleAddEntry);
         }
         
-        // Add export buttons
-        setupExportButtons();
-        
-        // Setup GitHub status indicator
-        setupGitHubStatus();
-    } catch (error) {
-        console.error('Error setting up event listeners:', error);
-    }
-}
-
-/**
- * Setup export buttons
- */
-function setupExportButtons() {
-    try {
-        // Create export buttons container if they don't already exist
-        if (!document.getElementById('export-excel-btn')) {
-            const exportContainer = document.createElement('div');
-            exportContainer.className = 'row mt-3';
-            exportContainer.innerHTML = `
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Export Data</h5>
-                            <p>Download your inventory data in Excel or CSV format.</p>
-                            <div class="d-flex gap-2">
-                                <button id="export-excel-btn" class="btn btn-primary">
-                                    <i class="fas fa-file-excel"></i> Export to Excel
-                                </button>
-                                <button id="export-csv-btn" class="btn btn-secondary">
-                                    <i class="fas fa-file-csv"></i> Export to CSV
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Find update section to append the buttons
-            const updateSection = document.getElementById('update');
-            if (updateSection) {
-                // Find a good place to insert it (after the import section)
-                const importSection = updateSection.querySelector('.row').nextElementSibling;
-                if (importSection) {
-                    updateSection.insertBefore(exportContainer, importSection);
-                }
-            }
-        }
-        
-        // Add event listeners for export buttons
+        // Export buttons
         const excelBtn = document.getElementById('export-excel-btn');
         if (excelBtn) {
             excelBtn.addEventListener('click', exportToExcel);
@@ -422,75 +152,119 @@ function setupExportButtons() {
             csvBtn.addEventListener('click', exportToCSV);
         }
     } catch (error) {
-        console.error('Error setting up export buttons:', error);
+        console.error('Error setting up event listeners:', error);
     }
 }
 
 /**
- * Export inventory to Excel
+ * Setup GitHub configuration handlers
  */
-function exportToExcel() {
+function setupGitHubConfiguration() {
     try {
-        // Get all data
-        const data = Database.getAllData();
+        const configBtn = document.getElementById('configure-github-btn');
+        const aboutBtn = document.getElementById('about-github-setup');
+        const modal = document.getElementById('github-config-modal');
+        const saveBtn = document.getElementById('save-github-config');
         
-        if (data.length === 0) {
-            alert('No data to export.');
-            return;
+        if (configBtn && modal) {
+            configBtn.addEventListener('click', showGitHubModal);
         }
         
-        // Convert to worksheet
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+        if (aboutBtn && modal) {
+            aboutBtn.addEventListener('click', showGitHubModal);
+        }
         
-        // Generate a filename with date
-        const date = new Date().toISOString().slice(0, 10);
-        const filename = `zoarch_inventory_${date}.xlsx`;
-        
-        // Export the file
-        XLSX.writeFile(workbook, filename);
+        if (saveBtn) {
+            saveBtn.addEventListener('click', saveGitHubConfig);
+        }
     } catch (error) {
-        console.error('Error exporting to Excel:', error);
-        alert('Error exporting to Excel: ' + error.message);
+        console.error('Error setting up GitHub configuration:', error);
     }
 }
 
 /**
- * Export inventory to CSV
+ * Show GitHub configuration modal
  */
-function exportToCSV() {
+function showGitHubModal() {
     try {
-        // Get all data
-        const data = Database.getAllData();
+        const modal = new bootstrap.Modal(document.getElementById('github-config-modal'));
         
-        if (data.length === 0) {
-            alert('No data to export.');
+        // Pre-fill form with stored values
+        document.getElementById('github-owner').value = localStorage.getItem('zoarch_github_owner') || '';
+        document.getElementById('github-repo').value = localStorage.getItem('zoarch_github_repo') || '';
+        document.getElementById('github-branch').value = localStorage.getItem('zoarch_github_branch') || 'main';
+        document.getElementById('github-path').value = localStorage.getItem('zoarch_github_path') || 'data/inventory.json';
+        
+        modal.show();
+    } catch (error) {
+        console.error('Error showing GitHub modal:', error);
+    }
+}
+
+/**
+ * Save GitHub configuration
+ */
+async function saveGitHubConfig() {
+    const saveBtn = document.getElementById('save-github-config');
+    const statusText = document.getElementById('github-config-status');
+    
+    try {
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveBtn.disabled = true;
+        
+        const owner = document.getElementById('github-owner').value.trim();
+        const repo = document.getElementById('github-repo').value.trim();
+        const branch = document.getElementById('github-branch').value.trim() || 'main';
+        const path = document.getElementById('github-path').value.trim() || 'data/inventory.json';
+        const token = document.getElementById('github-token').value.trim();
+        
+        if (!owner || !repo || !token) {
+            statusText.textContent = "Please fill in all required fields.";
             return;
         }
         
-        // Convert to worksheet then to CSV
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const csv = XLSX.utils.sheet_to_csv(worksheet);
+        // Store configuration
+        localStorage.setItem('zoarch_github_owner', owner);
+        localStorage.setItem('zoarch_github_repo', repo);
+        localStorage.setItem('zoarch_github_branch', branch);
+        localStorage.setItem('zoarch_github_path', path);
+        localStorage.setItem('zoarch_use_github', 'true');
+        sessionStorage.setItem('zoarch_github_token', token);
         
-        // Create a blob and download link
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        
-        // Generate a filename with date
-        const date = new Date().toISOString().slice(0, 10);
-        const filename = `zoarch_inventory_${date}.csv`;
-        
-        // Create and trigger download link
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Initialize GitHub storage
+        if (typeof GitHubStorage !== 'undefined') {
+            const success = await GitHubStorage.init({ owner, repo, branch, path, token });
+            
+            if (success) {
+                if (Database.setStorageMode) {
+                    Database.setStorageMode('github');
+                }
+                statusText.textContent = "✅ Connected to GitHub successfully!";
+                
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('github-config-modal')).hide();
+                    if (confirm('GitHub configuration saved! Reload the page to apply changes?')) {
+                        location.reload();
+                    }
+                }, 1500);
+            } else {
+                statusText.textContent = "❌ Failed to connect. Check your settings.";
+            }
+        } else {
+            statusText.textContent = "✅ Configuration saved. Reload to apply changes.";
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('github-config-modal')).hide();
+                if (confirm('GitHub configuration saved! Reload the page to apply changes?')) {
+                    location.reload();
+                }
+            }, 1500);
+        }
     } catch (error) {
-        console.error('Error exporting to CSV:', error);
-        alert('Error exporting to CSV: ' + error.message);
+        console.error('Error saving GitHub config:', error);
+        statusText.textContent = `Error: ${error.message}`;
+    } finally {
+        saveBtn.innerHTML = 'Save';
+        saveBtn.disabled = false;
     }
 }
 
@@ -499,17 +273,12 @@ function exportToCSV() {
  */
 function setupGitHubStatus() {
     try {
-        // Create status indicator if it doesn't exist
         if (!document.getElementById('github-status')) {
             const statusIndicator = document.createElement('div');
             statusIndicator.id = 'github-status';
             statusIndicator.className = 'position-fixed bottom-0 end-0 m-3';
-            
-            // Add to document
             document.body.appendChild(statusIndicator);
         }
-        
-        // Update status based on storage mode
         updateGitHubStatus();
     } catch (error) {
         console.error('Error setting up GitHub status:', error);
@@ -524,22 +293,11 @@ function updateGitHubStatus() {
         const indicator = document.getElementById('github-status');
         if (!indicator) return;
         
-        // Check if using GitHub
-        const usingGitHub = Database.getStorageMode() === 'github';
+        const usingGitHub = Database.getStorageMode && Database.getStorageMode() === 'github';
         
-        if (usingGitHub) {
-            indicator.innerHTML = `
-                <div class="badge bg-primary">
-                    <i class="fab fa-github"></i> GitHub Sync Enabled
-                </div>
-            `;
-        } else {
-            indicator.innerHTML = `
-                <div class="badge bg-secondary">
-                    <i class="fas fa-database"></i> Local Storage
-                </div>
-            `;
-        }
+        indicator.innerHTML = usingGitHub ? 
+            '<div class="badge bg-primary"><i class="fab fa-github"></i> GitHub Sync Enabled</div>' :
+            '<div class="badge bg-secondary"><i class="fas fa-database"></i> Local Storage</div>';
     } catch (error) {
         console.error('Error updating GitHub status:', error);
     }
@@ -550,7 +308,6 @@ function updateGitHubStatus() {
  */
 function loadDashboardData() {
     try {
-        // Get summary statistics
         const stats = Database.getSummaryStats();
         
         // Update dashboard cards
@@ -562,7 +319,7 @@ function loadDashboardData() {
         if (totalSpecies) totalSpecies.textContent = stats.uniqueSpecies.toLocaleString();
         if (totalFamilies) totalFamilies.textContent = stats.uniqueFamilies.toLocaleString();
         
-        // Add Incomplete Items card if it doesn't exist
+        // Add incomplete card if needed
         addIncompleteCard(stats.incompleteItems);
         
         // Load recent inventory items
@@ -574,7 +331,6 @@ function loadDashboardData() {
             
             recentItems.forEach(item => {
                 const row = document.createElement('tr');
-                
                 row.innerHTML = `
                     <td>${item['Catalog #'] || ''}</td>
                     <td>${item['Order'] || ''}</td>
@@ -583,7 +339,6 @@ function loadDashboardData() {
                     <td>${item['Species'] || ''}</td>
                     <td>${item['Common Name'] || ''}</td>
                 `;
-                
                 tableBody.appendChild(row);
             });
         }
@@ -597,14 +352,11 @@ function loadDashboardData() {
  */
 function addIncompleteCard(incompleteCount) {
     try {
-        // Check if card already exists
         if (document.getElementById('incomplete-items-card')) return;
         
-        // Find the dashboard cards row
         const dashboardRow = document.querySelector('#dashboard .row:nth-child(2)');
         if (!dashboardRow) return;
         
-        // Create the card
         const cardColumn = document.createElement('div');
         cardColumn.className = 'col-md-4 mb-3';
         cardColumn.id = 'incomplete-items-card';
@@ -614,21 +366,17 @@ function addIncompleteCard(incompleteCount) {
                 <div class="card-body">
                     <h5 class="card-title">Incomplete Records</h5>
                     <p class="card-text display-4 ${incompleteCount > 0 ? 'text-warning' : 'text-success'}" id="incomplete-count">${incompleteCount}</p>
-                    ${incompleteCount > 0 ? `<a href="#" id="view-incomplete-link" class="btn btn-warning btn-sm">View & Edit</a>` : ''}
+                    ${incompleteCount > 0 ? '<a href="#" id="view-incomplete-link" class="btn btn-warning btn-sm">View & Edit</a>' : ''}
                 </div>
             </div>
         `;
         
-        // Add to dashboard
         dashboardRow.appendChild(cardColumn);
         
-        // Add click handler for the "View & Edit" link
         const viewLink = document.getElementById('view-incomplete-link');
         if (viewLink) {
             viewLink.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Trigger click on the incomplete tab
                 const incompleteLink = document.getElementById('incomplete-link');
                 if (incompleteLink) {
                     incompleteLink.click();
@@ -641,67 +389,158 @@ function addIncompleteCard(incompleteCount) {
 }
 
 /**
- * Load and initialize the inventory table
+ * Handle import form submission
  */
-function loadInventoryTable() {
-    try {
-        const tableElement = document.getElementById('inventory-table');
-        if (!tableElement) return;
-        
-        // Get all data
-        const data = Database.getAllData();
-        
-        // Clear existing table
-        const tableBody = tableElement.querySelector('tbody');
-        if (!tableBody) return;
-        
-        tableBody.innerHTML = '';
-        
-        // Populate table
-        data.forEach(item => {
-            const row = document.createElement('tr');
+function handleImport(e) {
+    e.preventDefault();
+    
+    const fileInput = document.getElementById('import-file');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select a file to import.');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const append = confirm('Do you want to append this data to the existing inventory? Click "OK" to append or "Cancel" to replace all data.');
+    
+    Database.importFromFile(file, append)
+        .then(data => {
+            alert(`Successfully imported ${data.length} records.`);
             
-            // Highlight incomplete rows
-            if (isIncompleteRecord(item)) {
-                row.classList.add('table-warning');
+            // Reload data and update UI
+            loadDashboardData();
+            
+            if (typeof TabbedInventory !== 'undefined' && TabbedInventory.refreshAllTabs) {
+                TabbedInventory.refreshAllTabs();
             }
             
-            row.innerHTML = `
-                <td>${item['Owner'] || ''}</td>
-                <td>${item['Catalog #'] || ''}</td>
-                <td>${item['Order'] || ''}</td>
-                <td>${item['Family'] || ''}</td>
-                <td>${item['Genus'] || ''}</td>
-                <td>${item['Species'] || ''}</td>
-                <td>${item['Common Name'] || ''}</td>
-                <td>${item['Location'] || ''}</td>
-                <td>
-                    <button class="btn btn-sm btn-info view-details-btn" data-catalog="${item['Catalog #']}">
-                        <i class="fas fa-search"></i> Details
-                    </button>
-                </td>
-            `;
+            if (typeof IncompleteRecords !== 'undefined' && IncompleteRecords.loadIncompleteRecords) {
+                IncompleteRecords.loadIncompleteRecords();
+            }
             
-            tableBody.appendChild(row);
+            if (typeof Charts !== 'undefined' && Charts.updateCharts) {
+                Charts.updateCharts(Database.getChartData());
+            }
+            
+            // Reset form
+            fileInput.value = '';
+        })
+        .catch(error => {
+            alert(`Error importing data: ${error.message}`);
         });
+}
+
+/**
+ * Handle add entry form submission
+ */
+function handleAddEntry(e) {
+    e.preventDefault();
+    
+    const newEntry = {
+        'Owner': document.getElementById('entry-owner').value,
+        'Catalog #': document.getElementById('entry-catalog').value,
+        '# of specimens': document.getElementById('entry-specimens').value,
+        'Order': document.getElementById('entry-order').value,
+        'Family': document.getElementById('entry-family').value,
+        'Genus': document.getElementById('entry-genus').value,
+        'Species': document.getElementById('entry-species').value,
+        'Common Name': document.getElementById('entry-common').value,
+        'Location': document.getElementById('entry-location').value,
+        'Country': document.getElementById('entry-country').value,
+        'How collected': document.getElementById('entry-collected').value,
+        'Date collected': document.getElementById('entry-date').value,
+        'Notes': document.getElementById('entry-notes').value
+    };
+    
+    if (!newEntry['Catalog #']) {
+        alert('Catalog # is required.');
+        return;
+    }
+    
+    if (Database.addItem(newEntry)) {
+        alert('Entry added successfully.');
         
-        // Add click handlers for details buttons
-        const detailsButtons = document.querySelectorAll('.view-details-btn');
-        detailsButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const catalogNum = this.getAttribute('data-catalog');
-                showItemDetails(catalogNum);
-            });
-        });
-    } catch (error) {
-        console.error('Error loading inventory table:', error);
+        // Reload data and update UI
+        loadDashboardData();
+        
+        if (typeof TabbedInventory !== 'undefined' && TabbedInventory.refreshAllTabs) {
+            TabbedInventory.refreshAllTabs();
+        }
+        
+        if (typeof IncompleteRecords !== 'undefined' && IncompleteRecords.loadIncompleteRecords) {
+            IncompleteRecords.loadIncompleteRecords();
+        }
+        
+        // Reset form
+        e.target.reset();
+    } else {
+        alert('Failed to add entry. An item with this Catalog # may already exist.');
     }
 }
 
 /**
- * Show details for a specific item
+ * Export inventory to Excel
  */
-function showItemDetails(catalogNum) {
+function exportToExcel() {
+    try {
+        const data = Database.getAllData();
+        
+        if (data.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+        
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+        
+        const date = new Date().toISOString().slice(0, 10);
+        const filename = `zoarch_inventory_${date}.xlsx`;
+        
+        XLSX.writeFile(workbook, filename);
+    } catch (error) {
+        console.error('Error exporting to Excel:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+/**
+ * Export inventory to CSV
+ */
+function exportToCSV() {
+    try {
+        const data = Database.getAllData();
+        
+        if (data.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+        
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const csv = XLSX.utils.sheet_to_csv(worksheet);
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        const date = new Date().toISOString().slice(0, 10);
+        const filename = `zoarch_inventory_${date}.csv`;
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Error exporting to CSV:', error);
+        alert('Error exporting to CSV: ' + error.message);
+    }
+}
+
+/**
+ * Show details for a specific item (global function for use by other modules)
+ */
+window.showItemDetails = function(catalogNum) {
     try {
         const item = Database.getItemByCatalog(catalogNum);
         if (!item) {
@@ -709,23 +548,19 @@ function showItemDetails(catalogNum) {
             return;
         }
         
-        // Create a modal to show details
         const modalId = 'item-details-modal';
         let modal = document.getElementById(modalId);
         
-        // Remove existing modal if it exists
         if (modal) {
             document.body.removeChild(modal);
         }
         
-        // Create a new modal
         modal = document.createElement('div');
         modal.id = modalId;
         modal.className = 'modal fade';
         modal.tabIndex = -1;
         modal.setAttribute('aria-hidden', 'true');
         
-        // Collect all item properties
         const fields = Object.keys(item);
         const fieldsHTML = fields.map(field => {
             const value = item[field] || '';
@@ -740,7 +575,6 @@ function showItemDetails(catalogNum) {
             `;
         }).join('');
         
-        // Build modal content
         modal.innerHTML = `
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -761,118 +595,38 @@ function showItemDetails(catalogNum) {
             </div>
         `;
         
-        // Add modal to the document
         document.body.appendChild(modal);
         
-        // Initialize and show the modal
         const bsModal = new bootstrap.Modal(modal);
         bsModal.show();
         
-        // Add event listener for edit button
         modal.querySelector('.edit-item-btn').addEventListener('click', function() {
             const catalog = this.getAttribute('data-catalog');
-            
-            // Close this modal
             bsModal.hide();
             
-            // Check if item is incomplete
-            if (isIncompleteRecord(item)) {
-                // Navigate to incomplete tab
+            if (Database.hasIncompleteFields && Database.hasIncompleteFields(item)) {
                 const incompleteLink = document.getElementById('incomplete-link');
                 if (incompleteLink) {
                     incompleteLink.click();
                     
-                    // Flash the row with this catalog
                     setTimeout(() => {
-                        // Try to find in tabbed interface first
-                        const tabRows = document.querySelectorAll(`.taxonomy-tabs tr[data-catalog="${catalog}"]`);
-                        if (tabRows.length > 0) {
-                            // If we found it in tabs, highlight it
-                            tabRows.forEach(row => {
-                                row.classList.add('bg-info');
-                                setTimeout(() => row.classList.remove('bg-info'), 2000);
-                                
-                                // Scroll to the row
-                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                
-                                // Click on the tab that contains this row
-                                const tabPane = row.closest('.tab-pane');
-                                if (tabPane) {
-                                    const tabId = tabPane.id;
-                                    const tab = document.querySelector(`[data-bs-target="#${tabId}"]`);
-                                    if (tab) {
-                                        tab.click();
-                                    }
-                                }
-                            });
-                        } else {
-                            // Otherwise look in the original interface
-                            const row = document.querySelector(`#incomplete-table tr[data-catalog="${catalog}"]`);
-                            if (row) {
-                                row.classList.add('bg-info');
-                                setTimeout(() => row.classList.remove('bg-info'), 2000);
-                                
-                                // Scroll to the row
-                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
+                        const row = document.querySelector(`tr[data-catalog="${catalog}"]`);
+                        if (row) {
+                            row.classList.add('bg-info');
+                            setTimeout(() => row.classList.remove('bg-info'), 2000);
+                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
                     }, 500);
                 }
             } else {
-                // Navigate to update tab
                 const updateLink = document.getElementById('update-link');
                 if (updateLink) {
                     updateLink.click();
-                    
-                    // TODO: Add edit form for complete items if needed
-                    alert('Edit functionality for complete records is not yet implemented.');
                 }
+                alert('Edit functionality for complete records is not yet implemented.');
             }
         });
     } catch (error) {
         console.error('Error showing item details:', error);
     }
-}
-
-/**
- * Check if a record has incomplete fields
- */
-function isIncompleteRecord(item) {
-    // Define required fields (same as in Database.hasIncompleteFields)
-    const requiredFields = [
-        'Order', 'Family', 'Genus', 'Species', 'Common Name', 
-        'Location', 'Country', 'How collected', 'Date collected'
-    ];
-    
-    return requiredFields.some(field => 
-        !item[field] || item[field].toString().trim() === ''
-    );
-}
-
-/**
- * Function to modify the save behavior for incomplete records
- * to work with the tabbed interface
- */
-function modifyIncompleteRecordsSaveFunction() {
-    // Only modify if both modules exist
-    if (typeof IncompleteRecords !== 'undefined' && 
-        typeof TabbedIncompleteRecords !== 'undefined' &&
-        typeof TabbedIncompleteRecords.saveAllChanges === 'function') {
-        
-        // Store the original function
-        const originalSaveFunction = IncompleteRecords.saveAllChanges;
-        
-        // Override with a function that checks which interface is active
-        IncompleteRecords.saveAllChanges = function() {
-            // Check if the tabbed interface is active
-            const tabsElement = document.querySelector('#incompleteTaxonomyTabs');
-            if (tabsElement && window.getComputedStyle(tabsElement).display !== 'none') {
-                // Use the tabbed interface save function
-                TabbedIncompleteRecords.saveAllChanges();
-            } else {
-                // Use the original save function
-                originalSaveFunction();
-            }
-        };
-    }
-}
+};
