@@ -1,4 +1,4 @@
-/* Additional styles for ZOARCH Lab Inventory - GitHub and Incomplete Records */
+/* ZOARCH Lab Inventory - Complete Styles */
 
 /* General Enhancements */
 .container-fluid {
@@ -53,7 +53,8 @@
 }
 
 /* Form controls in table cells */
-#incomplete-table-body input {
+#incomplete-table-body input,
+.taxonomy-tabs input {
     width: 100%;
     padding: 0.25rem;
     border: 1px solid #ced4da;
@@ -92,20 +93,6 @@
     font-size: 0.8rem;
     margin-top: 0.25rem;
 }
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .table-responsive {
-        max-height: 70vh;
-    }
-    
-    #incomplete-table th, 
-    #incomplete-table td {
-        min-width: 120px;
-/* 
- * ZOARCH Lab Inventory - Tabbed Interface Styles
- * Add this to styles.css
- */
 
 /* Tab container styles */
 .taxonomy-tabs {
@@ -185,14 +172,6 @@
     border-bottom: 2px solid #dee2e6;
 }
 
-/* Empty cell styling */
-.taxonomy-tabs .incomplete-cell::before {
-    content: "Empty";
-    color: #dc3545;
-    font-style: italic;
-    opacity: 0.7;
-}
-
 /* Active row highlight */
 .taxonomy-tabs tr.active-edit {
     background-color: rgba(0, 123, 255, 0.1) !important;
@@ -205,6 +184,15 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+    .table-responsive {
+        max-height: 70vh;
+    }
+    
+    #incomplete-table th, 
+    #incomplete-table td {
+        min-width: 120px;
+    }
+    
     .taxonomy-tabs .nav-tabs {
         flex-wrap: nowrap;
         overflow-x: auto;
