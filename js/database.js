@@ -10,11 +10,8 @@ const Database = (function() {
     function init(config = {}) {
         return new Promise(async (resolve, reject) => {
             try {
-                if (config.useGitHub === true) {
+                if (config.useGitHub === true && typeof GitHubStorage !== 'undefined') {
                     storageMode = 'github';
-                }
-
-                if (storageMode === 'github' && typeof GitHubStorage !== 'undefined') {
                     const gitHubInitialized = await GitHubStorage.init(config.github || {});
                     if (gitHubInitialized && GitHubStorage.hasToken()) {
                         try {
@@ -32,14 +29,23 @@ const Database = (function() {
 
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 if (savedData) {
-                    inventoryData = JSON.parse(savedData);
-                    resolve(inventoryData);
+                    try {
+                        inventoryData = JSON.parse(savedData);
+                    } catch (e) {
+                        console.error('Error parsing saved data:', e);
+                        inventoryData = [];
+                        loadDemoData().then(resolve).catch(reject);
+                        return;
+                    }
                 } else {
                     loadDemoData().then(resolve).catch(reject);
+                    return;
                 }
+                resolve(inventoryData);
             } catch (error) {
                 console.error('Init error:', error);
-                resolve([]);
+                inventoryData = [];
+                resolve(inventoryData);
             }
         });
     }
@@ -61,8 +67,18 @@ const Database = (function() {
     }
 
     function saveData() {
-        saveToLocalStorage();
-        return true;
+        if (storageMode === 'github' && typeof GitHubStorage !== 'undefined' && GitHubStorage.hasToken()) {
+            return GitHubStorage.saveInventoryData(inventoryData)
+                .then(() => {
+                    saveToLocalStorage();
+                    return true;
+                })
+                .catch(error => {
+                    console.error('GitHub save failed:', error);
+                    return saveToLocalStorage();
+                });
+        }
+        return saveToLocalStorage();
     }
 
     function saveToLocalStorage() {
@@ -97,13 +113,14 @@ const Database = (function() {
 
                     if (file.name.endsWith('.csv')) {
                         const rows = data.split('\n');
-                        const headers = rows[0].split(',').map(h => h.trim());
+                        const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                        
                         for (let i = 1; i < rows.length; i++) {
                             if (!rows[i].trim()) continue;
-                            const values = rows[i].split(',');
+                            const values = rows[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
                             const entry = {};
                             headers.forEach((h, index) => {
-                                entry[h] = values[index] ? values[index].trim() : '';
+                                entry[h] = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
                             });
                             importedData.push(entry);
                         }
@@ -115,7 +132,7 @@ const Database = (function() {
 
                     inventoryData = append ? [...inventoryData, ...importedData] : importedData;
                     saveData();
-                    resolve(inventoryData);
+                    resolve(importedData);
                 } catch (error) {
                     reject(error);
                 }
@@ -130,7 +147,7 @@ const Database = (function() {
     }
 
     function getAllData() {
-        return inventoryData;
+        return [...inventoryData];
     }
 
     function getItemByCatalog(catalogNumber) {
@@ -139,7 +156,8 @@ const Database = (function() {
     }
 
     function addItem(item) {
-        if (item['Catalog #'] && getItemByCatalog(item['Catalog #'])) {
+        if (!item['Catalog #']) return false;
+        if (getItemByCatalog(item['Catalog #'])) {
             console.warn('Duplicate catalog number:', item['Catalog #']);
             return false;
         }
@@ -161,7 +179,10 @@ const Database = (function() {
         inventoryData = inventoryData.filter(item =>
             String(item['Catalog #']).trim() !== String(catalogNumber).trim()
         );
-        return inventoryData.length !== initialLength && saveData();
+        if (inventoryData.length !== initialLength) {
+            return saveData();
+        }
+        return false;
     }
 
     function getUniqueValues(field) {
@@ -200,10 +221,12 @@ const Database = (function() {
 
     function getChartData() {
         const orderCounts = {}, familyCounts = {}, countryCounts = {};
+        
         inventoryData.forEach(item => {
             const order = item.Order || 'Unknown';
             const family = item.Family || 'Unknown';
             const country = item.Country || 'Unknown';
+            
             orderCounts[order] = (orderCounts[order] || 0) + 1;
             familyCounts[family] = (familyCounts[family] || 0) + 1;
             countryCounts[country] = (countryCounts[country] || 0) + 1;
@@ -212,7 +235,10 @@ const Database = (function() {
         const topFamilies = Object.entries(familyCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
-            .reduce((obj, [key, val]) => (obj[key] = val, obj), {});
+            .reduce((obj, [key, val]) => {
+                obj[key] = val;
+                return obj;
+            }, {});
 
         return {
             orderData: orderCounts,
@@ -233,7 +259,9 @@ const Database = (function() {
         getSummaryStats,
         getChartData,
         getIncompleteRecords,
+        hasIncompleteFields,
         setStorageMode,
-        getStorageMode
+        getStorageMode,
+        saveData
     };
 })();
