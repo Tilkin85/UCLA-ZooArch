@@ -265,3 +265,8 @@ const Database = (function() {
         saveData
     };
 })();
+
+// Allow Node.js environments to import the Database module for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Database;
+}
