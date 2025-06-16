@@ -1,0 +1,16 @@
+{
+  "name": "ucla-zooarch",
+  "version": "1.0.0",
+  "description": "A web-based inventory management system for zoological and archaeological laboratory specimens. This application provides a user-friendly interface to browse, search, update, and analyze specimen collections.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^29.6.1"
+  }
+}
