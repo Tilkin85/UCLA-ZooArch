@@ -343,7 +343,7 @@ const IncompleteRecords = (function() {
     /**
      * Save all changes to the database
      */
-    function saveAllChanges() {
+    async function saveAllChanges() {
         try {
             // Make sure editing is finished
             if (activeEditCell) {
@@ -359,25 +359,29 @@ const IncompleteRecords = (function() {
             // Show saving indicator
             showSyncMessage('Saving changes...', 'info', true);
             
-            // Keep track of success
-            let success = true;
+            // Keep track of each save result
+            const results = [];
             
             // Save each modified record
             for (const catalog of modifiedRows) {
                 const recordIndex = incompleteData.findIndex(r => r['Catalog #'] == catalog);
                 if (recordIndex === -1) continue;
-                
+
                 const updatedRecord = incompleteData[recordIndex];
-                const saveResult = Database.updateItem ? Database.updateItem(catalog, updatedRecord) : false;
-                
-                if (!saveResult) {
-                    console.error('Failed to save record:', catalog);
-                    success = false;
+                let saveResult = false;
+                if (Database.updateItem) {
+                    try {
+                        saveResult = await Database.updateItem(catalog, updatedRecord);
+                    } catch (err) {
+                        console.error('Failed to save record:', catalog, err);
+                        saveResult = false;
+                    }
                 }
+                results.push(!!saveResult);
             }
-            
-            // Show success or error message
-            if (success) {
+
+            // Determine overall success
+            if (results.every(Boolean)) {
                 showSyncMessage('All changes saved successfully!', 'success');
                 
                 // Clear modified rows
